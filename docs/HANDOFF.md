@@ -3,7 +3,20 @@
 For the agent taking over. Read `CLAUDE.md` first, then the spec, then the plan.
 
 ## Where things stand
-- **Repo**: `github.com/scottf-tvw/sAId` (public, MIT), local `/Volumes/Work/GitDev/sAId`, branch `main`.
+- **Repo**: `github.com/scottf-tvw/sAId` (public, MIT), original checkout `/Volumes/Work/GitDev/sAId`, branch `main`.
+- **Active implementation worktree**: `/Users/scottfreeman/.codex/worktrees/said-implementation/sAId`.
+  Scott authorized completing the project autonomously. Task 1 is built, tested, reviewed, and in
+  [PR #1](https://github.com/scottf-tvw/sAId/pull/1). Task 2 (state machine) is complete on
+  `task/2-dictation-state`, with 42 passing tests and a clean scoped re-review; do not restart
+  Tasks 1–2. Shared-branch merge approval was requested and
+  is pending. Work continues on task branches meanwhile.
+- **Recovery state**: the worktree's ignored `.superpowers/sdd/2026-09-29-said-implementation/progress.md`
+  tracks task commits, reviews, and plan corrections. [IMPLEMENTATION-NOTES.md](IMPLEMENTATION-NOTES.md)
+  records durable decisions. The specification overrides defective plan sample code.
+- **Latest user steering**: Scott changed the engine selection to Moonshine for both live preview
+  and final transcription. Qwen will be removed. Updating the spec, plan, and dependencies is next;
+  older Qwen references below are historical until that amendment lands. Generic engine protocols
+  and reducer remain valid. No accuracy superiority has been asserted without measurement.
 - **Design approved** through §1 by Scott on 2026-09-29; §2–§10 follow the same session's decisions.
   `docs/superpowers/specs/2026-09-29-said-dictation-design.md`. Decision table in §0 — do not reopen.
 - **Skeleton builds**: `swift build` → "Build complete! (40.49s)" on Swift 6.3.3 / Xcode 26.6 /
@@ -11,9 +24,13 @@ For the agent taking over. Read `CLAUDE.md` first, then the spec, then the plan.
   - `speech-swift` @ `main` (`1e6e0e5`), product `Qwen3ASR` — plus its `SpeechCore.xcframework` v0.0.14
   - `moonshine-swift` **0.1.5**, product `MoonshineVoice` — plus `Moonshine.xcframework` v0.1.5
   - transitive: mlx-swift 0.31.6, mlx-swift-lm 3.31.4, hummingbird, swift-nio…
-  `Package.resolved` is committed. **Pin `speech-swift` to that commit** in Task 1 of the plan
-  (`revision:` instead of `branch:`) so builds stay reproducible.
-- No app code yet: `Sources/sAId/main.swift` is a one-line skeleton that imports both packages.
+  `Package.resolved` is committed. Task 1 pins `speech-swift` to that commit using `revision:`.
+- Task 1 replaces `main.swift` with a SwiftUI menu-bar placeholder in `App/sAIdApp.swift` and an
+  importable test target. The full application is still under implementation; hardware checks
+  have not been run.
+- A clean independent worktree build passed, followed by the module-import test (1 test,
+  0 failures). Do not symlink `.build` between checkouts: duplicate absolute module-cache paths
+  caused a compiler crash. Use a separate cache. Developer ID team `M2TEAF948X` is available.
 - `docs/borrowed/` holds the Parakey regions to port (hotkey listener, text insertion, corrections,
   filler removal) with the MIT notice; `parakey-audio-capture-…` is reference-only for two invariants.
 
@@ -31,7 +48,8 @@ For the agent taking over. Read `CLAUDE.md` first, then the spec, then the plan.
   If a 5-bit 1.7B variant appears in speech-swift's registry, prefer it (1.32 % WER, 1.9 GB).
 
 ## Next steps (in order)
-1. Execute `docs/superpowers/plans/2026-09-29-said-implementation.md` (11 tasks, TDD, code included) task by task
+1. Apply the Moonshine-only design/dependency amendment, then continue Tasks 3–11 in
+   `docs/superpowers/plans/2026-09-29-said-implementation.md` (Tasks 1–2 complete) task by task
    (subagent-driven development recommended; TDD; branch per task; PR to `main`).
 2. Hardware/TCC verification is Scott's: `docs/SMOKE.md`. Report "needs smoke", never "done".
 3. First real-hardware milestone: Task "Dictation end-to-end" — hold ⌥ in Notes, see live words,
