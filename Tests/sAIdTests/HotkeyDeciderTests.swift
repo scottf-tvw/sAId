@@ -10,6 +10,55 @@ final class HotkeyDeciderTests: XCTestCase {
                             flagsRawValue: flags, isAutoRepeat: repeatKey)
     }
 
+    func testOwnInsertionEventsPassThroughWithoutChangingPhysicalHold() {
+        for keycode: UInt16 in [0x09, 0] {
+            var decider = HotkeyDecider(hotkey: Hotkey(keycode: keycode))
+            let ownDown = HotkeyEventSnapshot(typeRawValue: CGEventType.keyDown.rawValue,
+                keycode: keycode, flagsRawValue: CGEventFlags.maskCommand.rawValue,
+                isAutoRepeat: false, sourceUserData: EventOrigin.insertion)
+            let ownUp = HotkeyEventSnapshot(typeRawValue: CGEventType.keyUp.rawValue,
+                keycode: keycode, flagsRawValue: 0, isAutoRepeat: false,
+                sourceUserData: EventOrigin.insertion)
+            XCTAssertEqual(decider.transition(ownDown), HotkeyDecision(action: .none, suppress: false))
+            XCTAssertFalse(decider.active)
+            XCTAssertEqual(decider.transition(event(.keyDown, keycode)).action, .pressed)
+            XCTAssertEqual(decider.transition(ownUp), HotkeyDecision(action: .none, suppress: false))
+            XCTAssertTrue(decider.active)
+            XCTAssertEqual(decider.transition(event(.keyUp, keycode)).action, .released)
+        }
+    }
+
+    func testOwnEscapeAndModifierEventsLeaveCancellationStateUntouched() {
+        var decider = HotkeyDecider()
+        _ = decider.transition(event(.flagsChanged, 61, flags: option))
+        for (type, code) in [(CGEventType.keyDown, UInt16(53)), (.flagsChanged, 61)] {
+            let own = HotkeyEventSnapshot(typeRawValue: type.rawValue, keycode: code,
+                flagsRawValue: option, isAutoRepeat: false, sourceUserData: EventOrigin.insertion)
+            XCTAssertEqual(decider.transition(own), HotkeyDecision(action: .none, suppress: false))
+            XCTAssertTrue(decider.active)
+        }
+        XCTAssertEqual(decider.transition(event(.keyDown, 53)).action, .cancel)
+        XCTAssertTrue(decider.transition(event(.keyUp, 53)).suppress)
+    }
+
+    func testListenerPassesOwnInsertionButKeepsForeignEventsActionable() {
+        let tap = FakeHotkeyTap()
+        let listener = HotkeyListener(hotkey: Hotkey(keycode: 9), tap: tap)
+        var actions: [HotkeyAction] = []
+        listener.onAction = { actions.append($0) }
+        XCTAssertTrue(listener.start())
+        for type in [CGEventType.keyDown, .keyUp] {
+            XCTAssertFalse(tap.send(HotkeyEventSnapshot(typeRawValue: type.rawValue, keycode: 9,
+                flagsRawValue: 0, isAutoRepeat: false, sourceUserData: EventOrigin.insertion)))
+        }
+        XCTAssertTrue(actions.isEmpty)
+        XCTAssertTrue(tap.send(HotkeyEventSnapshot(typeRawValue: CGEventType.keyDown.rawValue,
+            keycode: 9, flagsRawValue: 0, isAutoRepeat: false, sourceUserData: 123)))
+        XCTAssertTrue(tap.send(event(.keyUp, 9)))
+        XCTAssertEqual(actions, [.pressed, .released])
+        listener.stop()
+    }
+
     func testOnlyConfiguredPhysicalOptionStartsAndStopsHold() {
         var decider = HotkeyDecider()
         XCTAssertEqual(decider.transition(event(.flagsChanged, 58, flags: option)).action, .none)

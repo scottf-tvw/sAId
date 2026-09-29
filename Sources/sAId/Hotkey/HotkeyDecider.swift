@@ -8,6 +8,16 @@ struct HotkeyEventSnapshot: Sendable {
     let keycode: UInt16
     let flagsRawValue: UInt64
     let isAutoRepeat: Bool
+    let sourceUserData: Int64
+
+    init(typeRawValue: UInt32, keycode: UInt16, flagsRawValue: UInt64,
+         isAutoRepeat: Bool, sourceUserData: Int64 = 0) {
+        self.typeRawValue = typeRawValue
+        self.keycode = keycode
+        self.flagsRawValue = flagsRawValue
+        self.isAutoRepeat = isAutoRepeat
+        self.sourceUserData = sourceUserData
+    }
 }
 struct Hotkey: Sendable, Equatable {
     let keycode: UInt16
@@ -41,6 +51,10 @@ struct HotkeyDecider: Sendable {
     }
 
     mutating func transition(_ event: HotkeyEventSnapshot) -> HotkeyDecision {
+        // Our insertion keycodes can equal the user's hotkey. Do not consume them or alter held state.
+        guard event.sourceUserData != EventOrigin.insertion else {
+            return HotkeyDecision(action: .none, suppress: false)
+        }
         if event.keycode == 53 {
             if event.typeRawValue == CGEventType.keyDown.rawValue {
                 if suppressEscapeKeyUp { return HotkeyDecision(action: .none, suppress: true) }

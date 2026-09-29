@@ -105,7 +105,8 @@ private final class SystemHotkeyTap: HotkeyTap {
                         typeRawValue: type.rawValue,
                         keycode: UInt16(truncatingIfNeeded: event.getIntegerValueField(.keyboardEventKeycode)),
                         flagsRawValue: event.flags.rawValue,
-                        isAutoRepeat: type == .keyDown && event.getIntegerValueField(.keyboardEventAutorepeat) != 0
+                        isAutoRepeat: type == .keyDown && event.getIntegerValueField(.keyboardEventAutorepeat) != 0,
+                        sourceUserData: event.getIntegerValueField(.eventSourceUserData)
                     )
                     return context.handler(snapshot)
                 }
