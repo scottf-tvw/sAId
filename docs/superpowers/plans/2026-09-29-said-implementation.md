@@ -147,10 +147,10 @@ Also cover whole-word Unicode boundaries, multiword longest-first corrections, l
 
 **Interfaces:** add `FinalTranscriber` conformance with `transcribe(_ pcm16k:[Float]) async throws -> String`. Call resident `Transcriber.transcribeWithoutStreaming(audioData:sampleRate:flags:)`, rate 16000; concatenate ordered transcript lines. No second model load, Qwen dependency, or preview substitution.
 
-- [ ] Write failing tests for not-loaded error, empty/silent input, final after preview stop, no concurrent native streaming/final calls, cancellation boundaries, native failure, and reuse after failure. Keep implementation test seams narrow.
-- [ ] Implement final method on the shared actor. Reject invalid nonfinite audio, serialize ownership, and ensure cancellation prevents late results reaching insertion. Third-party synchronous inference may only observe cancellation at boundaries; document that honestly.
-- [ ] Run `SAID_MODEL_TESTS=1 swift test --filter MoonshineFinalEngineTests` against all three offline WAVs, assert nonempty/word-error ceiling and compare resulting ordered text. Measure output and elapsed time, not a silence-only tautology.
-- [ ] Test/build and commit. Model quality on Scott's voice remains for his corpus.
+- [x] Write failing tests for not-loaded error, empty/silent input, final after preview stop, no concurrent native streaming/final calls, cancellation boundaries, native failure, and reuse after failure. Keep implementation test seams narrow.
+- [x] Implement final method on the shared actor. Reject invalid nonfinite audio, serialize ownership, and ensure cancellation prevents late results reaching insertion. Third-party synchronous inference may only observe cancellation at boundaries; document that honestly.
+- [x] Run `SAID_MODEL_TESTS=1 swift test --filter MoonshineFinalEngineTests` against all three offline WAVs, assert nonempty/word-error ceiling and compare resulting ordered text. Measure output and elapsed time, not a silence-only tautology.
+- [x] Test/build and commit. Model quality on Scott's voice remains for his corpus.
 
 ### Task 9: Ordered controller and HUD
 

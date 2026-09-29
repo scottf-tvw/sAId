@@ -14,7 +14,7 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - Public MIT repo: `github.com/scottf-tvw/sAId`.
 - Original checkout `/Volumes/Work/GitDev/sAId` remains on `main`.
 - **Active worktree:** `/Users/scottfreeman/.codex/worktrees/said-implementation/sAId`.
-- Current branch: `task/7-moonshine-preview`, layered on reviewed Tasks 1–6 and the Moonshine amendment.
+- Current branch: `task/8-moonshine-final`, layered on reviewed Tasks 1–6 and the Moonshine amendment.
 - [PR #1](https://github.com/scottf-tvw/sAId/pull/1): baseline menu-bar entry/test target (original engine pin, superseded by the amendment).
 - [PR #2](https://github.com/scottf-tvw/sAId/pull/2): pure state machine and async engine protocols.
 - [PR #3](https://github.com/scottf-tvw/sAId/pull/3): Moonshine-only dependency/design amendment (review clean).
@@ -22,7 +22,8 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - [PR #5](https://github.com/scottf-tvw/sAId/pull/5): ordered audio capture; review clean.
 - [PR #6](https://github.com/scottf-tvw/sAId/pull/6): physical hotkey handling; review clean.
 - [PR #7](https://github.com/scottf-tvw/sAId/pull/7): clipboard-safe insertion and event-origin handling; review clean.
-- Task 7 Moonshine adapter/cache/preview is complete at `8a01472`, review clean; all 127 strict tests pass with cached-model contracts enabled. Task 8 final transcription is next.
+- [PR #8](https://github.com/scottf-tvw/sAId/pull/8): resident Moonshine preview and verified cache; review clean.
+- Task 7 Moonshine adapter/cache/preview is complete at `8a01472`, review clean; all 127 strict tests pass with cached-model contracts enabled. Task 8 final transcription is complete at `f1b24cd`, review clean.
 - Task 6 insertion is complete and reviewed, commits `7d22f0e`, `96a4f9f`; parent independently verified all 108 tests with strict concurrency and warnings-as-errors.
 - Task 5 hotkey handling is complete and reviewed, commits `68af2af`, `04dc44d`; 17 hotkey checks and all 81 tests pass. Review fixed physical-state resynchronization at startup/reconfiguration/recovery.
 - Task 4 audio capture is complete and reviewed, commit `8be4fd7`; 12 audio checks and all 64 tests pass. Strict-concurrency build passes; no hardware accessed.
@@ -45,9 +46,11 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 
 7. Task 6: clipboard-safe insertion and selectable Unicode fallback; restore on cancellation/failure, preserve newer clipboard contents, reject concurrent transactions, refuse secure input. Generated events bypass hotkey handling. Nil native clipboard reads fail before mutation. **108 tests pass**, review clean after one fix round.
 
-The final adapter, controller and full application UI remain to be implemented. A compiled menu-bar placeholder is not an end-to-end app.
+The controller and full application UI remain to be implemented. A compiled menu-bar placeholder is not an end-to-end app.
 
 8. Task 7: one resident actor-owned Moonshine model, fresh preview streams, aggregated line updates, explicit stop-time errors, validated atomic downloads and official mirror fallback. **127 tests pass**, including six offline native sessions; review clean.
+
+9. Task 8: final transcription on the same resident runtime, lifecycle/audio validation, cancellation boundaries and recovery after errors. **137 tests pass** with two opt-in skips; offline final suite separately passes all ten tests and six preview→final sessions. Review clean. Final compute time on the bundled clips was approximately 0.30–0.50 seconds; WER matches the preview results.
 
 ## Current interfaces
 
@@ -86,7 +89,7 @@ Insertion integration: `@MainActor TextInserter: TextSink` provides `insert(_:) 
 
 ## Next work
 
-Continue Tasks 8–11 in order; Task 7 shared Moonshine engine/cache/preview is reviewed. The Moonshine amendment is complete and remaining task briefs have been regenerated. The old sample code has been replaced by corrected contracts and test requirements; follow the amended spec and actual implemented interfaces.
+Continue Tasks 9–11 in order; both Moonshine roles are implemented and reviewed. The Moonshine amendment is complete and remaining task briefs have been regenerated. The old sample code has been replaced by corrected contracts and test requirements; follow the amended spec and actual implemented interfaces.
 
 Human assistance is expected once a signed full app is ready: grant Microphone/Input Monitoring/Accessibility and run `docs/SMOKE.md` in Notes and the other target apps. Real paste delivery, clipboard restoration, secure-input refusal, device changes, sleep/wake, and memory soak are **needs smoke**. Nothing has been marked passed without Scott's verification.
 
