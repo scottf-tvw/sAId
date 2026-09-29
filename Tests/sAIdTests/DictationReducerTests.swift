@@ -207,7 +207,8 @@ final class DictationReducerTests: XCTestCase {
 
     func testPreviewFailureStopsLiveTextAndKeepsFinalPath() {
         var state = listening()
-        XCTAssertEqual(send(&state, .previewFailed(session: first, reason: "offline")), [.stopPreview(session: first), .log("preview: offline")])
+        XCTAssertEqual(send(&state, .previewFailed(session: first, reason: "offline")), [.stopPreview(session: first), .log("preview: offline"), .scheduleErrorClear(timer: timer, after: 2)])
+        XCTAssertEqual(state.message, .error("Live preview unavailable"))
         XCTAssertFalse(state.previewActive)
         send(&state, .preview(session: first, line: .init(text: "late", isFinal: true)))
         XCTAssertEqual(state.phase, .listening(session: first, preview: "preview", seconds: 1))
@@ -429,4 +430,31 @@ final class DictationReducerTests: XCTestCase {
         send(&state, .hotkeyUp)
         XCTAssertEqual(send(&state, .hotkeyDown), [.startCapture(session: second), .startPreview(session: second)])
     }
+    func testCancelInvalidatesUnqueuedFinalAndInsertionCompletions() {
+        for initial in [finalizing(), inserting()] {
+            var state = initial
+            send(&state, .cancel)
+            XCTAssertEqual(state.phase, .idle)
+            XCTAssertEqual(send(&state, .finalText(session: first, text: "stale")), [])
+            XCTAssertEqual(send(&state, .inserted(session: first)), [])
+            send(&state, .hotkeyDown)
+            XCTAssertEqual(state.session, second)
+        }
+    }
+
+    func testModelReloadStopsCaptureButRetainsOutstandingInferenceOwnership() {
+        var capture = listening()
+        XCTAssertEqual(send(&capture, .modelsLoading), [.stopCapture(session: first), .stopPreview(session: first)])
+        XCTAssertEqual(capture.phase, .loadingModels)
+        XCTAssertEqual(capture.readiness, .loading)
+        for initial in [finalizing(), inserting()] {
+            var state = initial
+            send(&state, .modelsLoading)
+            XCTAssertEqual(state.session, first)
+            XCTAssertEqual(state.readiness, .loading)
+            send(&state, .hotkeyDown)
+            XCTAssertFalse(state.queuedStart)
+        }
+    }
+
 }

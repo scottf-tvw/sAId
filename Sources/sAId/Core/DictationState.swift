@@ -51,6 +51,8 @@ struct DictationState: Sendable, Equatable {
 }
 
 enum DictationEvent: Sendable, Equatable {
+    case modelsLoading
+    case unavailable(String)
     case modelsReady
     case modelsFailed(String)
     case hotkeyDown

@@ -11,6 +11,22 @@ struct DictationReducer: Sendable {
         var effects: [DictationEffect] = []
 
         switch event {
+        case .modelsLoading:
+            state.readiness = .loading
+            state.queuedStart = false
+            switch state.phase {
+            case .finalizing, .inserting: break // Keep ownership until its completion or cancellation.
+            default:
+                if case .listening(let session, _, _) = state.phase {
+                    stopListening(&state, session: session, effects: &effects)
+                }
+                state.phase = .loadingModels
+                clearMessage(&state)
+            }
+
+        case .unavailable(let reason):
+            showError(&state, message: reason, effects: &effects)
+
         case .modelsReady:
             guard state.readiness != .ready else { return (previous, []) }
             state.readiness = .ready
@@ -76,11 +92,17 @@ struct DictationReducer: Sendable {
 
         case .cancel:
             // Retain physical held state: Esc does not manufacture a fresh key press.
+            let wasQueued = state.queuedStart
             state.queuedStart = false
-            if case .listening(let session, _, _) = state.phase {
+            switch state.phase {
+            case .listening(let session, _, _):
                 stopListening(&state, session: session, effects: &effects)
                 state.phase = restingPhase(state.readiness)
                 clearMessage(&state)
+            case .finalizing where !wasQueued, .inserting where !wasQueued:
+                state.phase = restingPhase(state.readiness)
+                clearMessage(&state)
+            default: break
             }
 
         case .audio(let session, let seconds):
@@ -159,6 +181,7 @@ struct DictationReducer: Sendable {
                   current == session else { return (previous, []) }
             state.previewActive = false
             effects += [.stopPreview(session: session), .log("preview: \(reason)")]
+            showError(&state, message: "Live preview unavailable", preservingPhase: true, effects: &effects)
 
         case .captureFailed(let session, let reason):
             guard case .listening(let current, _, _) = state.phase, current == session else { return (previous, []) }
