@@ -102,6 +102,7 @@ The hardened signed copy produced identical edit/reference counts and hypotheses
 - `/Applications/sAId.app` passes strict signature/designated-requirement/team checks, hardened runtime, arm64, exactly the audio-input entitlement and bundled default/notices byte comparisons. Its executable matches the Release product: SHA256 `d39d9991b51adccab8937a207f050a71f3bc34be7a01921d445150dcf47777d5`.
 - Installer lock and owned staging directory were removed. No previous app existed, and no other application was replaced. Logs: `final-install.log` and `final-installed-verification.log` in the ignored SDD directory.
 - Agent-owned implementation, automated verification, review, installation and task PR work are complete. Live acceptance and a notarized distribution ZIP still require the human actions below.
+- Home-Mini test preparation: Scott is at `freeman-hm-mini`. The installed app above is on `itdir-Mac-Studio`; direct SSH to `freeman-hm-mini.local` did not resolve. A 13 MiB signed local-test ZIP is prepared at `/Users/scottfreeman/Downloads/sAId-home-test-2026-09-29.8dCL0U/sAId-signed-local-test.zip` on the Studio. The extracted copy passed signature/resource checks and matches the installed executable. Archive SHA256: `ca7d8da00f2ea6228d90ebfbc9fc6e4ebd656c5d31d37196b547afe9f1cbc727`. This is not a notarized release; transfer method is awaiting Scott's reply. No installation or hardware test on the home Mini has occurred. Run the test locally there with a connected microphone; requirements remain Apple Silicon and macOS 15+.
 
 ## Current interfaces
 
