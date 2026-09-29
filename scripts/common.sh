@@ -31,3 +31,11 @@ verify_app() (
         cmp "$resource" "$app/Contents/Resources/${resource##*/}" || fail "Missing or altered resource: ${resource##*/}"
     done
 )
+
+# Build in the caller's owned staging directory; no global helper cache or extra runtime dependency.
+# Fail closed if the toolchain/filesystem cannot provide macOS RENAME_EXCL semantics.
+build_rename_helper() {
+    local sdk
+    sdk=$(xcrun --sdk macosx --show-sdk-path)
+    xcrun clang -isysroot "$sdk" -Wall -Wextra -Werror "$SAID_ROOT/scripts/rename-exclusive.c" -o "$1"
+}

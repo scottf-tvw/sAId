@@ -38,8 +38,13 @@ make install                     # builds Release, verifies, safely stages/swaps
 ```
 
 Installation does not launch the app, invoke sudo, or grant permissions. It preserves the previous
-app through build/staging/verification and restores it on a failed swap. If rollback itself fails,
-it retains the previous app in the reported recovery directory. Launch the installed app explicitly
+app through build/staging/verification and restores it on a failed swap when the destination remains
+free. Install, rollback and ZIP publication use macOS atomic exclusive renames: an appearing destination
+is never overwritten or treated as a containing directory. If rollback is blocked, the prior app stays
+in the reported recovery directory and the competing destination is left intact. Installers serialize
+with a `.sAId-install.lock` directory beside the app; an existing lock fails clearly instead of waiting.
+After a forcibly killed installer, confirm it is no longer running and recover any retained app before
+removing its stale lock. Launch the installed app explicitly
 when ready. An owned test destination may be supplied with `SAID_INSTALL_DEST=/absolute/path/sAId.app`;
 its parent directory must already exist and be writable. `SAID_BUILD_DIR` selects the build directory.
 For another signing account, set `SAID_SIGNING_IDENTITY` and `SAID_TEAM_ID` to a matching Developer ID.
@@ -100,7 +105,9 @@ make release VERSION=1.0.0
 The script sets the bundle version, builds Release, stages and signs it with Developer ID and hardened
 runtime, verifies signature/resources/entitlements, submits via the `said-notary` Keychain profile,
 requires Accepted status, staples and validates, then creates `dist/sAId-VERSION.zip`. Existing release
-ZIPs are never overwritten. Failed notarization leaves no final named release ZIP. Nothing is published
+ZIPs are never overwritten, including when another process publishes during the final operation.
+The small exclusive-rename helper is compiled with the selected Xcode SDK into owned staging; unsupported
+filesystem operations fail closed. Failed notarization leaves no final named release ZIP. Nothing is published
 to GitHub. `SAID_DIST_DIR` and `SAID_NOTARY_PROFILE` are optional overrides.
 
 The `said-notary` profile is not provisioned on the implementation Mac; actual notarization is pending.

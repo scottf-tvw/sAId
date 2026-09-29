@@ -14,6 +14,8 @@ work=$(mktemp -d "$dist/.said-release.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
+rename_exclusive="$work/rename-exclusive"
+build_rename_helper "$rename_exclusive"
 export SAID_CONFIGURATION=Release
 "$SAID_ROOT/scripts/build-app.sh" "MARKETING_VERSION=$version" "CURRENT_PROJECT_VERSION=$version"
 ditto "$SAID_BUILD_DIR/Build/Products/Release/sAId.app" "$work/sAId.app"
@@ -34,5 +36,5 @@ xcrun stapler validate "$work/sAId.app"
 verify_app "$work/sAId.app"
 ditto -c -k --sequesterRsrc --keepParent "$work/sAId.app" "$work/final.zip"
 [ ! -e "$final" ] && [ ! -L "$final" ] || fail "Release appeared during build: $final"
-mv "$work/final.zip" "$final"
+"$rename_exclusive" "$work/final.zip" "$final" || fail "Release publication failed; any existing archive was preserved: $final"
 printf 'Notarized and stapled release: %s\nNo release has been published.\n' "$final"
