@@ -77,7 +77,7 @@ The reducer's actual API is in `Sources/sAId/Core/`. It uses a `DictationState` 
 
 **Interfaces:** `Correction: Codable, Equatable, Sendable` with `from`/`to`; `CorrectionsStore(fileURL:)` with load/save and `defaultURL`; `PostProcess(corrections:fillers:trailingSpace:)` with `apply(_:) -> String`. Values passed across actors are checked Sendable. Surface malformed-file errors without overwriting users' data.
 
-- [ ] Write tests first, including:
+- [x] Write tests first, including:
 ```swift
 XCTAssertEqual(pp.apply("um hello tvw"), "Hello TVW")
 XCTAssertEqual(pp.apply("it is, you know, fine"), "It is fine")
@@ -85,10 +85,10 @@ XCTAssertEqual(pp.apply("it is, you know, fine"), "It is fine")
 XCTAssertEqual(pp.apply("see org.tvw.said and https://x.y/um"), "See org.tvw.said and https://x.y/um")
 ```
 Also cover whole-word Unicode boundaries, multiword longest-first corrections, literal replacement `$`/backslashes, empty rules, protected numbers/URLs/code tokens through ALL stages, correction casing at the beginning (`mimoLive`), leading brand casing (`iPhone`), punctuation cleanup, optional trailing space, and JSON round trip/corruption.
-- [ ] `swift test --filter PostProcessTests` must fail before implementation.
-- [ ] Implement corrections → filler removal → first-letter casing → optional trailing space. Use protected spans or equivalent without sentinel collisions. Do not lowercase replacement strings. Empty results stay empty.
-- [ ] Defaults: invintus→Invintus, tvw→TVW, mimo live→mimoLive, live bus→LAIveBus, ndi→NDI; fillers `um`, `uh`, `er`, `hmm`, `you know` (avoid globally deleting meaningful `like`). Keep source attribution.
-- [ ] Run focused tests plus `swift build`; commit reviewed task.
+- [x] `swift test --filter PostProcessTests` must fail before implementation.
+- [x] Implement corrections → filler removal → first-letter casing → optional trailing space. Use protected spans or equivalent without sentinel collisions. Do not lowercase replacement strings. Empty results stay empty.
+- [x] Defaults: invintus→Invintus, tvw→TVW, mimo live→mimoLive, live bus→LAIveBus, ndi→NDI; fillers `um`, `uh`, `er`, `hmm`, `you know` (avoid globally deleting meaningful `like`). Keep source attribution.
+- [x] Run focused tests plus `swift build`; commit reviewed task.
 
 ### Task 4: Ordered audio capture and lifecycle recovery
 
@@ -96,12 +96,12 @@ Also cover whole-word Unicode boundaries, multiword longest-first corrections, l
 
 **Interfaces:** `CaptureSource: Sendable` with `start() async throws -> AsyncThrowingStream<[Float], Error>` and `stop() async`. Each start returns a fresh stream. Stop terminates production only after previously accepted chunks are yielded, finishes the stream, and is idempotent. The controller waits for its consumer to drain. `AudioCapture` conforms and accepts input-device UID configuration; empty UID means system default.
 
-- [ ] First test `.haveData` exactly once for an enqueued synthetic buffer, then `.noDataNow`, including a second press cycle. Test real conversion 48 kHz mono/stereo → 16 kHz mono and ordered samples with finite values.
-- [ ] Test capture lifecycle using a narrow backend seam for start failure, ordered queued chunks on stop, configuration change, wake, device loss, restart, and repeated stop. No mic or permission prompts.
-- [ ] Run focused tests to observe failures.
-- [ ] Implement non-main-actor ownership. AVFoundation buffers cannot outlive their callback without copying/ownership; no unsafe cross-thread mutable fields. Use checked actor/Mutex isolation and a nonisolated tap closure. Conversion is allowed in the tap if prompt; inference is not.
-- [ ] Select CoreAudio device by UID; check setter errors. Rebuild on configuration/wake notifications; mid-session loss finishes with an error, next press can recover. Remove observers/tap safely at shutdown.
-- [ ] Run focused tests and strict-concurrency build, document actual stream/drain interface, commit.
+- [x] First test `.haveData` exactly once for an enqueued synthetic buffer, then `.noDataNow`, including a second press cycle. Test real conversion 48 kHz mono/stereo → 16 kHz mono and ordered samples with finite values.
+- [x] Test capture lifecycle using a narrow backend seam for start failure, ordered queued chunks on stop, configuration change, wake, device loss, restart, and repeated stop. No mic or permission prompts.
+- [x] Run focused tests to observe failures.
+- [x] Implement non-main-actor ownership. AVFoundation buffers cannot outlive their callback without copying/ownership; no unsafe cross-thread mutable fields. Use checked actor/Mutex isolation and a nonisolated tap closure. Conversion is allowed in the tap if prompt; inference is not.
+- [x] Select CoreAudio device by UID; check setter errors. Rebuild on configuration/wake notifications; mid-session loss finishes with an error, next press can recover. Remove observers/tap safely at shutdown.
+- [x] Run focused tests and strict-concurrency build, document actual stream/drain interface, commit.
 
 ### Task 5: Physical hotkey handling
 
@@ -109,11 +109,11 @@ Also cover whole-word Unicode boundaries, multiword longest-first corrections, l
 
 **Interfaces:** `HotkeyAction: Sendable, Equatable` cases `pressed`, `released`, `cancel`, `none`. Pure `HotkeyDecider` maps event type/keycode/flags/autorepeat into actions; listener is main-actor isolated, exposes start/stop and a synchronous main-actor action callback or ordered stream.
 
-- [ ] Tests before implementation: right-vs-left Option, both Options held then right released, repeated ordinary keydown, Esc while held, Esc release, modifier cancellation followed by release, stop/reset, configurable ordinary and modifier keys.
-- [ ] Verify failures with `swift test --filter HotkeyDeciderTests`.
-- [ ] Port attributed listener/decider logic. Physical side is authoritative, since Option masks are side-agnostic. Use event snapshots at actor boundaries; avoid unowned raw pointers after teardown.
-- [ ] Tap watches flagsChanged, keyDown/keyUp, re-enables on timeout, logs failures. Start/stop are idempotent. Never invoke real tap/input APIs in unit tests.
-- [ ] Test/build and commit; hardware/TCC needs smoke.
+- [x] Tests before implementation: right-vs-left Option, both Options held then right released, repeated ordinary keydown, Esc while held, Esc release, modifier cancellation followed by release, stop/reset, configurable ordinary and modifier keys.
+- [x] Verify failures with `swift test --filter HotkeyDeciderTests`.
+- [x] Port attributed listener/decider logic. Physical side is authoritative, since Option masks are side-agnostic. Use event snapshots at actor boundaries; avoid unowned raw pointers after teardown.
+- [x] Tap watches flagsChanged, keyDown/keyUp, re-enables on timeout, logs failures. Start/stop are idempotent. Never invoke real tap/input APIs in unit tests.
+- [x] Test/build and commit; hardware/TCC needs smoke.
 
 ### Task 6: Safe insertion transaction and selectable Unicode fallback
 
