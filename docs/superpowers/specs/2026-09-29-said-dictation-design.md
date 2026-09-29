@@ -58,7 +58,7 @@ One Swift 6 process: `MenuBarExtra` status item + a non-activating floating `NSP
 | `App` (`sAIdApp.swift`) | `MenuBarExtra`, wiring, lifecycle, model-loading gate | SwiftUI |
 | `Hotkey` | `CGEventTap` on `flagsChanged` + `keyDown`/`keyUp`; detects Right-Option press/release by diffing the `.maskAlternate` flag with the physical keycode; Esc while held = cancel; re-enables the tap on `tapDisabledByTimeout` | Ported from Parakey (`docs/borrowed/parakey-hotkey-listener.swift`), MIT notice kept |
 | `AudioCapture` | Owns `AVAudioEngine`; installs an input tap at the hardware format; converts to 16 kHz mono Float32 with `AVAudioConverter`; delivers `[Float]` chunks on a serial `DispatchQueue` | **Fresh.** Invariants in §2.3 |
-| `Engine` (protocol) | `protocol FinalTranscriber { func transcribe(_ pcm16k: [Float]) async throws -> String }` and `protocol PreviewTranscriber { func start() async throws -> AsyncStream<PreviewLine>; func feed(_ pcm16k: [Float]) async throws; func stop() async }` | Fakes conform in tests |
+| `Engine` (protocol) | `protocol FinalTranscriber { func transcribe(_ pcm16k: [Float]) async throws -> String }` and `protocol PreviewTranscriber { func start() async throws -> AsyncThrowingStream<PreviewLine, Error>; func feed(_ pcm16k: [Float]) async throws; func stop() async }` | Fakes conform in tests |
 | `MoonshineEngine` final role | `Transcriber.transcribeWithoutStreaming(audioData:sampleRate:flags:)` on the complete utterance after streaming stops | Same resident native transcriber; serialized actor access. Join completed transcript lines in order. Never substitute a preview after final failure. |
 | `MoonshineEngine` preview role | `MoonshineVoice.Transcriber(modelPath:modelArch: .mediumStreaming)` + `Stream`; `addAudio(_:sampleRate: 16000)` per chunk; listeners for `LineTextChanged` / `LineCompleted` / `TranscriptError` | Model fetched with `ensureModelPresent(root:spec: .stt("en", .mediumStreaming, …))` into `~/Library/Application Support/sAId/models/moonshine/` |
 | `PostProcess` | Corrections dictionary (whole-word, case-insensitive, user-editable JSON), filler removal (`um`, `uh`, `you know`, …), first-letter capitalization, trailing-space option | Logic adapted from Parakey's small helpers (attributed); rewritten with tests |
@@ -101,7 +101,7 @@ Use `moonshine-swift` **exactly 0.1.5**, product `MoonshineVoice`, model arch `.
 
 Scott confirmed **English Medium Streaming** using the [current model list](https://moonshine-voice.readthedocs.io/en/latest/models/available-models/#current-models). This is the 245-million-parameter English model and maps to `.mediumStreaming` in Swift. Its published aggregate WER is not interchangeable with a single-dataset score or Scott's own vocabulary results.
 
-One `MoonshineEngine` actor owns one resident `Transcriber`. It conforms to the existing async `PreviewTranscriber` and `FinalTranscriber` protocols. Start a fresh native `Stream` and fresh `AsyncStream<PreviewLine>` for each press; keep the model resident. Aggregate engine line IDs into an ordered utterance preview. Begin with an update interval of 0.3 seconds. Release drains capture, stops the preview, and invokes `transcribeWithoutStreaming` on the full 16 kHz mono Float32 buffer. A final pass failure retains the preview in History but never pastes it.
+One `MoonshineEngine` actor owns one resident `Transcriber`. It conforms to the existing async `PreviewTranscriber` and `FinalTranscriber` protocols. Start a fresh native `Stream` and fresh `AsyncThrowingStream<PreviewLine, Error>` for each press; keep the model resident. Aggregate engine line IDs into an ordered utterance preview. Surface thrown stop failures and synchronous native `TranscriptError` events through the throwing preview stream before finishing it; retain the resident model for the final pass. Begin with an update interval of 0.3 seconds. Release drains capture, stops the preview, and invokes `transcribeWithoutStreaming` on the full 16 kHz mono Float32 buffer. A final pass failure retains the preview in History but never pastes it.
 
 Load at launch and show model progress; refuse capture until the model is ready. A streaming-session failure degrades live text without disabling final transcription while the underlying model remains loaded. A model-load failure keeps dictation disabled and offers Retry. Settings show readiness, progress, cache location, and an explicit model-reset action with local confirmation; reset affects only this app's model files.
 
@@ -109,7 +109,7 @@ Cache: `~/Library/Application Support/sAId/models/moonshine/`. Obtain the requir
 
 The current catalog contains adapter, encoder, decoder, cross-KV, frontend, tokenizer, and streaming configuration files. Do not hard-code assumptions about its optional spelling or word-timestamp models. Neither optional model is required in v1.
 
-Accuracy and latency are measured on the bundled synthetic fixtures and Scott's eventual recorded jargon corpus. The engine change follows Scott's preference; it is not an unmeasured claim that one model has universally lower WER.
+Accuracy and latency are measured on the bundled LibriSpeech fixtures and Scott's eventual recorded jargon corpus. The engine change follows Scott's preference; it is not an unmeasured claim that one model has universally lower WER.
 
 ## 4. HUD and menu UX
 
