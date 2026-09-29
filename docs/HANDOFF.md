@@ -18,18 +18,8 @@ For the agent taking over. Read `CLAUDE.md` first, then the spec, then the plan.
   filler removal) with the MIT notice; `parakey-audio-capture-…` is reference-only for two invariants.
 
 ## Verified API surface (from the checked-out sources, 2026-09-29)
-**speech-swift / Qwen3ASR** — `Qwen3ASRModel.fromPretrained(…)`; variants `.small` (0.6B →
-`aufklarer/Qwen3-ASR-0.6B-MLX-4bit`) and `.large` (1.7B → `aufklarer/Qwen3-ASR-1.7B-MLX-8bit`);
-`transcribe(audio:sampleRate:)` on 16 kHz mono `[Float]`; `transcribeCheckingCancellation(…)`.
-Cache `~/Library/Caches/qwen3-speech/` (override `QWEN3_CACHE_DIR`); `offlineMode`. Exact
-signatures are quoted in the plan's engine task.
-**moonshine-swift / MoonshineVoice** — `Transcriber(modelPath:modelArch:…)` with
-`ModelArch.mediumStreaming`; `createStream(…)` / `getDefaultStream()` → `Stream`; `Stream.start()`,
-`addAudio(_:sampleRate: 16000)`, `addListener { (TranscriptEvent) in … }`, `stop()`, `close()`;
-events `LineStarted`, `LineUpdated`, `LineTextChanged`, `LineCompleted`, `TranscriptError`, each with
-`line: TranscriptLine`; `Transcriber.setKeyterms([String])` (vocabulary boost) and
-`setContext(_:)`; `transcribeWithoutStreaming(…)` for batch. Models via
-`AssetDownloader.ensureModelPresent(root:spec: .stt(…), onProgress:)`, resumable, atomic.
+**speech-swift / Qwen3ASR** — `public extension Qwen3ASRModel { static func fromPretrained(modelId: String = "aufklarer/Qwen3-ASR-0.6B-MLX-4bit", cacheDir: URL? = nil, offlineMode: Bool = false, progressHandler: ((Double, String) -> Void)? = nil) async throws -> Qwen3ASRModel }`; 1.7B = `"aufklarer/Qwen3-ASR-1.7B-MLX-8bit"` (`ASRModelSize.large`); `transcribe(audio:sampleRate:options: Qwen3DecodingOptions) -> String` and `transcribeCheckingCancellation(audio:sampleRate:options:) throws -> String`; `Qwen3DecodingOptions()` has `maxTokens`, `language`, `context`. Cache `~/Library/Caches/qwen3-speech/` (override `QWEN3_CACHE_DIR`).
+**moonshine-swift / MoonshineVoice** — `Transcriber(modelPath: String, modelArch: ModelArch = .base, options: [TranscriberOption]? = nil, spellingModelPath: String? = nil) throws`; `createStream(updateInterval: TimeInterval = 0.5, flags: UInt32 = 0, transcribeFlags: UInt32 = 0) throws -> Stream`; `Stream.start()/stop()/close()`, `addAudio(_ audioData: [Float], sampleRate: Int32 = 16000) throws`, `addListener((TranscriptEvent) throws -> Void)`; events `LineStarted`, `LineUpdated`, `LineTextChanged`, `LineCompleted` (`line.text`, `startTime`, `duration`, `lineId`), `TranscriptError` (`error`); `Transcriber.setKeyterms([String]) throws` (no commas), `setContext(_:maxTerms:)`, `transcribeWithoutStreaming(audioData:sampleRate:flags:) throws -> Transcript`; `ModelArch`: `.tiny .base .tinyStreaming .baseStreaming .smallStreaming .mediumStreaming`; `AssetDownloader().ensureModelPresent(root: URL, spec: .stt(language:modelArch:includeSpelling:includeWordTimestamps:), onProgress:) async throws -> URL`.
 
 ## Facts the plan relies on
 - Right-Option is a modifier: the hotkey tap watches `flagsChanged` and diffs `.maskAlternate`
@@ -41,7 +31,7 @@ events `LineStarted`, `LineUpdated`, `LineTextChanged`, `LineCompleted`, `Transc
   If a 5-bit 1.7B variant appears in speech-swift's registry, prefer it (1.32 % WER, 1.9 GB).
 
 ## Next steps (in order)
-1. Execute `docs/superpowers/plans/2026-09-29-said-implementation.md` task by task
+1. Execute `docs/superpowers/plans/2026-09-29-said-implementation.md` (11 tasks, TDD, code included) task by task
    (subagent-driven development recommended; TDD; branch per task; PR to `main`).
 2. Hardware/TCC verification is Scott's: `docs/SMOKE.md`. Report "needs smoke", never "done".
 3. First real-hardware milestone: Task "Dictation end-to-end" — hold ⌥ in Notes, see live words,
