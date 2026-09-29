@@ -1,3 +1,4 @@
+@testable import SaidEngine
 import XCTest
 @testable import sAId
 

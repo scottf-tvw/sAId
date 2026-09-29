@@ -14,7 +14,7 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - Public MIT repo: `github.com/scottf-tvw/sAId`.
 - Original checkout `/Volumes/Work/GitDev/sAId` remains on `main`.
 - **Active worktree:** `/Users/scottfreeman/.codex/worktrees/said-implementation/sAId`.
-- Current branch: `task/10-app-shell`, layered on reviewed Tasks 1–9 and the Moonshine amendment.
+- Current branch: `task/11-packaging-benchmark`, layered on reviewed Tasks 1–10 and the Moonshine amendment.
 - [PR #1](https://github.com/scottf-tvw/sAId/pull/1): baseline menu-bar entry/test target (original engine pin, superseded by the amendment).
 - [PR #2](https://github.com/scottf-tvw/sAId/pull/2): pure state machine and async engine protocols.
 - [PR #3](https://github.com/scottf-tvw/sAId/pull/3): Moonshine-only dependency/design amendment (review clean).
@@ -25,6 +25,8 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - [PR #8](https://github.com/scottf-tvw/sAId/pull/8): resident Moonshine preview and verified cache; review clean.
 - [PR #9](https://github.com/scottf-tvw/sAId/pull/9): final transcription on the same resident model; review clean.
 - [PR #10](https://github.com/scottf-tvw/sAId/pull/10): ordered controller and nonactivating HUD; review clean.
+- [PR #11](https://github.com/scottf-tvw/sAId/pull/11): full app shell, settings, History, permission recovery and signed bundle; review clean.
+- PRs #1–11 remain open and unmerged pending approval. Task 11 implementation is complete locally; its PR and independent final review are parent-owned and pending.
 - Task 10 app shell/signed bundle is complete at `c35013e`/`a149c35`, base `75185b8`; independent review approved, menu-error fix re-review clean.
 - Task 9 controller/HUD is complete at `f1c3b3d`, review clean; 164 strict tests pass with two expected opt-in skips.
 - Task 7 Moonshine adapter/cache/preview is complete at `8a01472`, review clean; all 127 strict tests pass with cached-model contracts enabled. Task 8 final transcription is complete at `f1b24cd`, review clean.
@@ -50,7 +52,7 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 
 7. Task 6: clipboard-safe insertion and selectable Unicode fallback; restore on cancellation/failure, preserve newer clipboard contents, reject concurrent transactions, refuse secure input. Generated events bypass hotkey handling. Nil native clipboard reads fail before mutation. **108 tests pass**, review clean after one fix round.
 
-The full app shell, settings, persistent History, permission UI and signed Debug bundle are implemented in Task 10. Packaging, installation, final review and hardware acceptance remain.
+The full app shell, settings, persistent History, permission UI and signed Debug bundle are implemented in Task 10. Task 11 packaging and temporary-destination installation are now verified; final independent review, actual /Applications installation and hardware acceptance remain.
 
 8. Task 7: one resident actor-owned Moonshine model, fresh preview streams, aggregated line updates, explicit stop-time errors, validated atomic downloads and official mirror fallback. **127 tests pass**, including six offline native sessions; review clean.
 
@@ -58,7 +60,29 @@ The full app shell, settings, persistent History, permission UI and signed Debug
 
 10. Task 9: ordered controller integrates capture, both Moonshine roles, insertion and History values; cancellation/shutdown await cleanup. Exact sample boundaries, queued physical actions, source/settings snapshots and errors are tested. Nonactivating 44 pt HUD is implemented. **164 tests pass** with two opt-in skips; review clean.
 
-11. Task 10: full app shell and shared stores, permission recovery, coherent per-session settings/insertion changes, model retry/reset with explicit native release, and signed Xcodegen bundle. **164 XCTest cases (two expected opt-in skips) plus 12 Swift Testing cases pass** with complete concurrency and warnings-as-errors. Signed Debug build, arm64/Developer ID/hardened-runtime/audio-input checks and bundled defaults/notices are verified. Independent review approved; the menu save-error visibility observation is fixed and re-reviewed. Extra injected permission-poll lifecycle tests are deferred as a coverage improvement; existing behavior passed review. The app has not been launched or installed.
+11. Task 10: full app shell and shared stores, permission recovery, coherent per-session settings/insertion changes, model retry/reset with explicit native release, and signed Xcodegen bundle. **164 XCTest cases (two expected opt-in skips) plus 12 Swift Testing cases pass** with complete concurrency and warnings-as-errors. Signed Debug build, arm64/Developer ID/hardened-runtime/audio-input checks and bundled defaults/notices are verified. Independent review approved; the menu save-error visibility observation is fixed and re-reviewed. Extra injected permission-poll lifecycle tests are deferred as a coverage improvement; existing behavior passed review. The app has not been launched. Task 11 later exercised installation only in an owned temporary destination.
+
+## Task 11 verification (2026-09-29)
+
+- Shared `Sources/SaidEngine` module contains the unchanged inference/cache behavior, with narrow public engine/protocol APIs. The app and benchmark use that same implementation. SPM and Xcodegen both compile it once; Xcode's final app target explicitly links the Moonshine package because local static-library targets do not propagate its objects automatically. Exact 0.1.5 pin, per-session controller configuration/sink snapshots, and explicit native reset ownership remain intact.
+- `make build` and `make test` pass with complete strict concurrency and warnings as errors: **169 XCTest cases, two expected opt-in skips, 0 failures; 12 Swift Testing cases, 0 failures; 8 Python packaging tests, 0 failures**. Parser tests reject truncated/malformed audio and preserve signed PCM sample values; WER tests cover literal numbers, edits, empty references and corpus weighting. Existing ordering/reset tests pass after extraction.
+- `SAID_MODEL_TESTS=1 swift test -Xswiftc -strict-concurrency=complete -Xswiftc -warnings-as-errors --filter 'MoonshineModelContractTests|MoonshineFinalEngineTests'`: **11 tests, no skips or failures**, including repeated offline preview/final sessions on the resident model.
+- Signed Debug and Release `.app` builds pass signature/designated-requirement/team checks, arm64, hardened runtime, exactly the audio-input entitlement, and byte-for-byte bundled default/notices checks. App identity is `org.tvw.said`, version 1.0.0, minimum macOS 15. Apple emits one non-Swift warning that AppIntents metadata extraction is skipped without that framework dependency.
+- `make install` was exercised with a real prior signed app at `build/task11-install.c0JAae/Applications/sAId.app`; it built Release, verified the staged copy, replaced the previous app, and never launched it. Resulting executable matches the Release build. Actual `/Applications/sAId.app` installation remains parent-owned after review.
+- An owned copy of the release benchmark at `build/task11-hardened-bench.ogca9L/said-bench` is signed by the same Developer ID with hardened runtime and exactly the app's audio-input entitlement. Its offline inference succeeds; no broader entitlement was needed. This validates native loading under that policy, not GUI/TCC behavior.
+- Bash 3.2 packaging tests prove build/generation/copy/signature/extra-entitlement/staged-verification/swap failures preserve the old app; failed rollback retains a recoverable backup. Notary submission failure, non-Accepted status and staple failures leave no final release ZIP. Make/benchmark failures propagate. Release changes the actual staged bundle version, signs/verifies, requires accepted notarization and a validated staple, then archives. No actual notarization or publication was attempted; the Keychain profile remains absent.
+- Logs and full task report: `.superpowers/sdd/2026-09-29-said-implementation/task-11-report.md` and `task-11-*.log` in the active worktree (ignored local evidence).
+
+Benchmark: `./scripts/bench.sh --preview Tests/Fixtures Tests/Fixtures/transcripts.json` loads one verified cached model in 0.6461 seconds. All files use literal lowercase alphanumeric WER; no reference or number rewriting. Results below are **prerecorded fast-feed compute**, not live microphone/HUD latency or release-to-paste latency.
+
+| Fixture | Edits / reference words (both roles) | WER | Preview compute s | Final compute s |
+|---|---:|---:|---:|---:|
+| 1272-128104-0000.wav | 0 / 17 | 0 | 1.414844 | 0.410689 |
+| 1272-128104-0005.wav | 1 / 18 | 0.055556 | 1.410713 | 0.491978 |
+| 1272-128104-0008.wav | 2 / 11 | 0.181818 | 0.564523 | 0.300144 |
+| Corpus (19.985 s audio) | 3 / 46 | **0.065217** | **3.390080** | **1.202811** |
+
+The hardened signed copy produced identical edit/reference counts and hypotheses; load/verify 0.6279 seconds, preview total 3.457341 seconds, final total 1.227656 seconds. Three LibriSpeech clips from one speaker are pipeline evidence, not Scott's jargon accuracy. README describes his optional 20-sentence corpus. Empty-reference insertion errors stay in corpus totals; per-file WER is undefined when an empty reference has nonempty output.
 
 ## Current interfaces
 
@@ -99,10 +123,17 @@ Controller integration: `send(action,target:)` is synchronous/nonisolated and be
 
 ## Next work
 
-Continue Task 11: shared-engine benchmark, safe build/install/release scripts, final native/unit/build validation and whole-branch review. The controller and HUD are implemented and reviewed. The Moonshine amendment is complete and remaining task briefs have been regenerated. The old sample code has been replaced by corrected contracts and test requirements; follow the amended spec and actual implemented interfaces.
+Parent: review Task 11 and the entire final branch independently, address load-bearing findings, create the remaining PR, then install the reviewed signed app in `/Applications/sAId.app`. Merge approval is still pending. Do not launch it or perform desktop automation on Scott's behalf.
 
-The notarization Keychain profile `said-notary` is absent; signed local builds are available without it. Request secure profile provisioning only after the release pipeline is concrete. No credentials have been read.
+First human milestone: Scott launches the app, grants Microphone/Input Monitoring/Accessibility through its checklist, waits for Models ready, copies a distinctive clipboard sentinel and dictates in **Notes** with Right Option. He should observe live words, one final insertion on release, then verify that pasting elsewhere restores the original sentinel. Record his report in `docs/SMOKE.md`; all 30 manual matrix rows remain **needs smoke**, including real paste delivery, secure-input refusal, focus, device changes, sleep/wake, and eight-hour memory residency.
 
-Human assistance is expected once the reviewed full app is installed: grant Microphone/Input Monitoring/Accessibility and run `docs/SMOKE.md` in Notes and the other target apps. Real paste delivery, clipboard restoration, secure-input refusal, device changes, sleep/wake, and memory soak are **needs smoke**. Nothing has been marked passed without Scott's verification.
+The notarization Keychain profile `said-notary` is absent. The completed release pipeline can be used after Scott provisions it interactively in his own terminal:
 
-Scott uses the Mac through Splashtop. **Never lock the screen or invoke a Computer Use lock workflow.** No microphone capture, permission grants, synthetic desktop events, or screen automation have been performed in this implementation run.
+```bash
+xcrun notarytool store-credentials said-notary --team-id M2TEAF948X
+make release VERSION=1.0.0
+```
+
+Do not send credentials through chat or source files. No credentials were read and no additional profiles probed. Signed local builds are ready without notarization; a notarized distribution ZIP has not been created.
+
+Scott uses this Mac through Splashtop. **Never lock the screen or invoke a Computer Use lock workflow.** No microphone capture, TCC request/grant, keyboard/paste/clipboard operation, GUI launch, screen capture, or desktop automation occurred in this task. All test/build/benchmark subprocesses have completed; there are no idle waiters. The real signed temporary installation and hardened CLI are retained as review artifacts under ignored `build/`.

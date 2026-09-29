@@ -16,8 +16,8 @@ preview. No sidecar, no Electron, no IPC — that is the whole reason this app e
 ```bash
 swift build                 # SPM: Moonshine package links; fast compile checks
 swift test -Xswiftc -strict-concurrency=complete
-xcodegen generate           # once project.yml exists (plan task) → sAId.xcodeproj
-xcodebuild -project sAId.xcodeproj -scheme sAId -configuration Debug build   # the .app bundle
+make app                    # signed Debug .app via Xcodegen
+make install                # build/verify Release, stage/swap /Applications/sAId.app; no launch
 ```
 SPM builds a CLI binary; the menu-bar app, HUD and TCC identity need the `.app` from xcodegen.
 The first `swift build` downloads the Moonshine binary framework; later builds are quick.
@@ -48,8 +48,10 @@ The first `swift build` downloads the Moonshine binary framework; later builds a
 
 ## Where things live
 ```
-Sources/sAId/   App · Hotkey · AudioCapture · Engines (Moonshine final and preview adapters) ·
-                PostProcess · Inserter · HUD · Permissions · Settings · History · Log
+Sources/sAId/   App · Hotkey · AudioCapture · PostProcess · Inserter · HUD ·
+                Permissions · Settings · History · Log
+Sources/SaidEngine/  Shared resident Moonshine adapter and verified model cache
+Sources/SaidBench/   Offline WAV/reference benchmark CLI (uses SaidEngine)
 Tests/sAIdTests/
 docs/borrowed/  Parakey reference regions (MIT) — reference only, not compiled
 scripts/        bench.sh (WER on Scott's jargon set), release.sh (sign + notarize)

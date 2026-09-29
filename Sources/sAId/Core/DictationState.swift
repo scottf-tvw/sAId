@@ -1,3 +1,4 @@
+import SaidEngine
 /// Identities belong to a reducer/controller lifetime. Never reset state between utterances.
 struct DictationSessionID: Sendable, Equatable, Hashable {
     let rawValue: UInt64

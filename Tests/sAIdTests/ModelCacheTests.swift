@@ -1,3 +1,4 @@
+@testable import SaidEngine
 import Foundation
 import Synchronization
 import XCTest

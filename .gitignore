@@ -9,3 +9,5 @@ DerivedData/
 /release/
 /build/
 /.superpowers/
+
+__pycache__/

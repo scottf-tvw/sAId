@@ -3,6 +3,13 @@
 Run on real hardware after any change to Hotkey, AudioCapture, Inserter, HUD or Permissions.
 These are Scott's to verify; an agent reports them as "needs smoke" in the PR, never as done.
 
+First milestone (still **needs smoke**): after the reviewed app is installed, launch it manually,
+grant Microphone/Input Monitoring/Accessibility in its checklist, and wait for Models ready. Copy
+`CLIPBOARD-SENTINEL-42`, place the cursor in **Notes**, hold **Right Option**, speak, and release.
+Confirm live words in the HUD, exactly one final insertion, and restoration of the sentinel when
+pasted elsewhere. Record this result before working through the remaining matrix. Signed fixture
+inference does not verify GUI focus, microphone/input permissions, or actual paste delivery.
+
 Setup: copy something distinctive to the clipboard first (e.g. `CLIPBOARD-SENTINEL-42`).
 After each row, paste (⌘V) somewhere harmless and confirm the sentinel is back. All rows below are **needs smoke** until Scott records a result; automated tests do not satisfy them. Scott controls sleep, permissions and real app input; the agent must not lock the Mac or run these actions through desktop automation.
 

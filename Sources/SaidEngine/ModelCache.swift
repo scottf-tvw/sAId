@@ -4,12 +4,12 @@ import Foundation
 import Moonshine
 import MoonshineVoice
 
-let defaultModelRoot = FileManager.default.homeDirectoryForCurrentUser
+public let defaultModelRoot = FileManager.default.homeDirectoryForCurrentUser
     .appendingPathComponent("Library/Application Support/sAId/models/moonshine", isDirectory: true)
 
-typealias ModelProgress = @Sendable (Double, String) -> Void
+public typealias ModelProgress = @Sendable (Double, String) -> Void
 
-enum ModelCacheError: Error, Equatable {
+public enum ModelCacheError: Error, Equatable {
     case incomplete, invalidManifest, unsafePath(String), integrity(String), http(Int), catalog(Int32)
 }
 

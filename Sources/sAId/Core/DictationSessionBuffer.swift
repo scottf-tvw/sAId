@@ -1,3 +1,4 @@
+import SaidEngine
 /// Audio acceptance is independent of preview/inference and the controller's ordered actions.
 /// Only this actor appends samples; its preview stream retains the same ordered, trimmed chunks.
 actor DictationSessionBuffer {

@@ -1,7 +1,7 @@
 import Foundation
 import MoonshineVoice
 
-enum MoonshineEngineError: Error { case notLoaded, notStreaming, alreadyStreaming, loading, invalidAudio }
+public enum MoonshineEngineError: Error { case notLoaded, notStreaming, alreadyStreaming, loading, invalidAudio }
 
 enum NativePreviewEvent: Sendable {
     case line(id: UInt64, text: String, complete: Bool)
@@ -22,7 +22,7 @@ protocol PreviewRuntimeStream: AnyObject {
     func takeEvents() -> [NativePreviewEvent]
 }
 
-actor MoonshineEngine: PreviewTranscriber, FinalTranscriber {
+public actor MoonshineEngine: PreviewTranscriber, FinalTranscriber {
     private let modelRoot: URL
     private let runtimeFactory: @Sendable (URL) throws -> any MoonshineRuntime
     private let needsCache: Bool
@@ -35,7 +35,7 @@ actor MoonshineEngine: PreviewTranscriber, FinalTranscriber {
     private var keyterms: [String] = []
     private var loading = false
 
-    init(modelRoot: URL = defaultModelRoot) {
+    public init(modelRoot: URL = defaultModelRoot) {
         self.modelRoot = modelRoot; self.needsCache = true
         self.runtimeFactory = { try NativeMoonshineRuntime(root: $0) }
     }
@@ -44,7 +44,7 @@ actor MoonshineEngine: PreviewTranscriber, FinalTranscriber {
         self.modelRoot = defaultModelRoot; self.runtimeFactory = runtimeFactory; self.needsCache = false
     }
 
-    func load(progress: ModelProgress? = nil, downloadIfMissing: Bool = true) async throws {
+    public func load(progress: ModelProgress? = nil, downloadIfMissing: Bool = true) async throws {
         if runtime != nil { return }
         guard !loading else { throw MoonshineEngineError.loading }
         loading = true
@@ -66,7 +66,7 @@ actor MoonshineEngine: PreviewTranscriber, FinalTranscriber {
     /// Only for user-confirmed reset or quit, after the controller is quiescent
     /// and the load task has finished. Actor isolation waits for synchronous inference.
     /// Explicitly drop native ownership even if an old controller still retains this actor.
-    func releaseForExplicitReset() throws {
+    public func releaseForExplicitReset() throws {
         guard !loading else { throw MoonshineEngineError.loading }
         guard nativeStream == nil else { throw MoonshineEngineError.alreadyStreaming }
         continuation?.finish(); continuation = nil
@@ -74,7 +74,7 @@ actor MoonshineEngine: PreviewTranscriber, FinalTranscriber {
         order.removeAll(); lines.removeAll()
     }
 
-    func setKeyterms(_ terms: [String]) throws {
+    public func setKeyterms(_ terms: [String]) throws {
         var seen = Set<String>()
         let cleaned = terms.compactMap { raw -> String? in
             guard !raw.contains(","), !raw.contains("\0") else { return nil }
@@ -90,7 +90,7 @@ actor MoonshineEngine: PreviewTranscriber, FinalTranscriber {
     /// Whole-utterance inference shares the resident runtime and never yields actor ownership.
     /// The native call is synchronous and cannot be preempted. Cancellation is checked at its
     /// boundaries so a result completed after cancellation cannot reach the caller for insertion.
-    func transcribe(_ pcm16k: [Float]) async throws -> String {
+    public func transcribe(_ pcm16k: [Float]) async throws -> String {
         try Task.checkCancellation()
         guard let runtime else { throw MoonshineEngineError.notLoaded }
         guard nativeStream == nil else { throw MoonshineEngineError.alreadyStreaming }
@@ -102,7 +102,7 @@ actor MoonshineEngine: PreviewTranscriber, FinalTranscriber {
         return lines.filter { !$0.isEmpty }.joined(separator: " ")
     }
 
-    func start() throws -> AsyncThrowingStream<PreviewLine, Error> {
+    public func start() throws -> AsyncThrowingStream<PreviewLine, Error> {
         try Task.checkCancellation()
         guard let runtime else { throw MoonshineEngineError.notLoaded }
         guard nativeStream == nil else { throw MoonshineEngineError.alreadyStreaming }
@@ -126,7 +126,7 @@ actor MoonshineEngine: PreviewTranscriber, FinalTranscriber {
         }
     }
 
-    func feed(_ pcm16k: [Float]) throws {
+    public func feed(_ pcm16k: [Float]) throws {
         guard let native = nativeStream else {
             throw runtime == nil ? MoonshineEngineError.notLoaded : MoonshineEngineError.notStreaming
         }
@@ -143,7 +143,7 @@ actor MoonshineEngine: PreviewTranscriber, FinalTranscriber {
         }
     }
 
-    func stop() {
+    public func stop() {
         guard let native = nativeStream else { return }
         do {
             try native.stop()

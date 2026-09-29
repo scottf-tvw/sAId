@@ -24,6 +24,18 @@ settings:
     CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
     ENABLE_APP_SANDBOX: NO
 targets:
+  SaidEngine:
+    type: library.static
+    platform: macOS
+    sources:
+      - path: Sources/SaidEngine
+    dependencies:
+      - package: MoonshineVoice
+        product: MoonshineVoice
+    settings:
+      base:
+        PRODUCT_MODULE_NAME: SaidEngine
+        DEFINES_MODULE: YES
   sAId:
     type: application
     platform: macOS
@@ -32,6 +44,8 @@ targets:
       - path: Resources
         buildPhase: resources
     dependencies:
+      - target: SaidEngine
+      # Xcode does not propagate SPM objects through a local static-library target.
       - package: MoonshineVoice
         product: MoonshineVoice
     settings:

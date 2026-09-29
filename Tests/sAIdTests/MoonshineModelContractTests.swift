@@ -1,3 +1,4 @@
+@testable import SaidEngine
 import Foundation
 import MoonshineVoice
 import XCTest
@@ -10,7 +11,7 @@ final class MoonshineModelContractTests: XCTestCase {
         guard ProcessInfo.processInfo.environment["SAID_MODEL_TESTS"] == "1" else {
             throw XCTSkip("Set SAID_MODEL_TESTS=1 to run offline cached-model contracts")
         }
-        let cache = sAId.ModelCache(root: defaultModelRoot, manifest: try .englishMedium())
+        let cache = SaidEngine.ModelCache(root: defaultModelRoot, manifest: try .englishMedium())
         guard try cache.isComplete() else { throw XCTSkip("Complete verified cached model unavailable; never download in contracts") }
         let engine = MoonshineEngine()
         let loadStart = Date()
