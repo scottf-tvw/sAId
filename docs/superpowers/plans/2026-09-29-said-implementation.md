@@ -121,11 +121,11 @@ Also cover whole-word Unicode boundaries, multiword longest-first corrections, l
 
 **Interfaces:** `TextSink: Sendable { func insert(_ text: String) async throws }`; main-actor `TextInserter` conforms. Errors distinguish secure input, unavailable permission/event creation, and failed setup. Accept injectable pasteboard/event/secure-check/delay seams for safe tests. Insertion strategy is clipboard paste or direct Unicode.
 
-- [ ] Test snapshot/restore for multiple items/types, empty clipboard, failed snapshot, failed write/event creation, cancellation during restore delay, a newer external clipboard change, concurrent insertion requests, and secure-input refusal (zero clipboard/events).
-- [ ] Test Unicode chunking including composed emoji/surrogates; known pre-delivery setup failure may fall back, unknown delivery acceptance must not duplicate text.
-- [ ] Observe failing tests, implement exclusive transaction ownership. Secure-check immediately before posting; restore in guaranteed cleanup even on cancellation, but do not overwrite a newer external change. Approximately 150 ms normal paste restore delay.
-- [ ] Never interpret CGEvent construction as target-app acknowledgment. On failure keep text available to History; preserve clipboard. UI copy must say `Paste failed — copy from History`.
-- [ ] Run focused tests/build; commit. No real general-pasteboard mutation or synthesized desktop events in tests.
+- [x] Test snapshot/restore for multiple items/types, empty clipboard, failed snapshot, failed write/event creation, cancellation during restore delay, a newer external clipboard change, concurrent insertion requests, and secure-input refusal (zero clipboard/events).
+- [x] Test Unicode chunking including composed emoji/surrogates; known pre-delivery setup failure may fall back, unknown delivery acceptance must not duplicate text.
+- [x] Observe failing tests, implement exclusive transaction ownership. Secure-check immediately before posting; restore in guaranteed cleanup even on cancellation, but do not overwrite a newer external change. Approximately 150 ms normal paste restore delay.
+- [x] Never interpret CGEvent construction as target-app acknowledgment. On failure keep text available to History; preserve clipboard. UI copy must say `Paste failed — copy from History`.
+- [x] Run focused tests/build; commit. No real general-pasteboard mutation or synthesized desktop events in tests.
 
 ### Task 7: Shared resident Moonshine engine, download/cache, live preview
 

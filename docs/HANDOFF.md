@@ -14,12 +14,14 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - Public MIT repo: `github.com/scottf-tvw/sAId`.
 - Original checkout `/Volumes/Work/GitDev/sAId` remains on `main`.
 - **Active worktree:** `/Users/scottfreeman/.codex/worktrees/said-implementation/sAId`.
-- Current branch: `task/5-hotkey`, layered on reviewed Tasks 1–4 and the Moonshine amendment.
+- Current branch: `task/6-insertion`, layered on reviewed Tasks 1–5 and the Moonshine amendment.
 - [PR #1](https://github.com/scottf-tvw/sAId/pull/1): baseline menu-bar entry/test target (original engine pin, superseded by the amendment).
 - [PR #2](https://github.com/scottf-tvw/sAId/pull/2): pure state machine and async engine protocols.
 - [PR #3](https://github.com/scottf-tvw/sAId/pull/3): Moonshine-only dependency/design amendment (review clean).
 - [PR #4](https://github.com/scottf-tvw/sAId/pull/4): protected transcript postprocessing; review clean.
 - [PR #5](https://github.com/scottf-tvw/sAId/pull/5): ordered audio capture; review clean.
+- [PR #6](https://github.com/scottf-tvw/sAId/pull/6): physical hotkey handling; review clean.
+- Task 6 insertion is complete and reviewed, commits `7d22f0e`, `96a4f9f`; parent independently verified all 108 tests with strict concurrency and warnings-as-errors.
 - Task 5 hotkey handling is complete and reviewed, commits `68af2af`, `04dc44d`; 17 hotkey checks and all 81 tests pass. Review fixed physical-state resynchronization at startup/reconfiguration/recovery.
 - Task 4 audio capture is complete and reviewed, commit `8be4fd7`; 12 audio checks and all 64 tests pass. Strict-concurrency build passes; no hardware accessed.
 - Task 3 (postprocessing) is complete and reviewed, commits `5205424`, `5b1c41a`; parent independently verified 52 strict-concurrency tests. Wrapped URL, filler punctuation, and normalized correction priority regressions are fixed.
@@ -39,7 +41,9 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 
 6. Task 5: configurable physical hotkey handling, Escape cancellation, ordered main-actor callbacks, owned tap context, and safe recovery with physical-key resynchronization. **81 tests pass** with strict concurrency; review clean after one fix round.
 
-The actual application UI/insertion/engine adapters are still to be implemented. A compiled menu-bar placeholder is not an end-to-end app.
+7. Task 6: clipboard-safe insertion and selectable Unicode fallback; restore on cancellation/failure, preserve newer clipboard contents, reject concurrent transactions, refuse secure input. Generated events bypass hotkey handling. Nil native clipboard reads fail before mutation. **108 tests pass**, review clean after one fix round.
+
+The actual application UI/engine adapters/controller are still to be implemented. A compiled menu-bar placeholder is not an end-to-end app.
 
 ## Current interfaces
 
@@ -54,6 +58,8 @@ The actual application UI/insertion/engine adapters are still to be implemented.
 - Queued presses start after insertion completion only while still held; release/cancel withdraws them. The model-readiness state is not proof that in-flight inference has finished.
 
 Audio integration: `AudioCapture(inputDeviceUID:)` conforms to `CaptureSource`; each `start()` returns a fresh ordered `AsyncThrowingStream<[Float], Error>`. `stop()` quiesces production and finishes accepted chunks; the controller must wait for the consumer to drain. Configuration/wake/device loss ends the current stream with an error and next press creates a new backend. UID is fixed per capture instance; changing settings safely replaces the source.
+
+Insertion integration: `@MainActor TextInserter: TextSink` provides `insert(_:) async throws`; configure clipboard paste or direct Unicode. Completion means events posted and cleanup finished, not target acceptance. Calls reject overlap; controller owns queued presses. Record the final text in History on success or failure. `TextInsertionError.userMessage` provides secure-input or History-copy messaging.
 
 ## Models and test fixtures
 
@@ -75,7 +81,7 @@ Audio integration: `AudioCapture(inputDeviceUID:)` conforms to `CaptureSource`; 
 
 ## Next work
 
-Continue Tasks 6–11 in order; Task 6 clipboard-safe insertion is next. The Moonshine amendment is complete and remaining task briefs have been regenerated. The old sample code has been replaced by corrected contracts and test requirements; follow the amended spec and actual implemented interfaces.
+Continue Tasks 7–11 in order; Task 7 shared Moonshine engine/cache/preview is next. The Moonshine amendment is complete and remaining task briefs have been regenerated. The old sample code has been replaced by corrected contracts and test requirements; follow the amended spec and actual implemented interfaces.
 
 Human assistance is expected once a signed full app is ready: grant Microphone/Input Monitoring/Accessibility and run `docs/SMOKE.md` in Notes and the other target apps. Real paste delivery, clipboard restoration, secure-input refusal, device changes, sleep/wake, and memory soak are **needs smoke**. Nothing has been marked passed without Scott's verification.
 
