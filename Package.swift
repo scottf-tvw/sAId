@@ -11,8 +11,8 @@ let package = Package(
         .executable(name: "sAId", targets: ["sAId"]),
     ],
     dependencies: [
-        // Qwen3-ASR (MLX + CoreML) — Apache-2.0. Pin to a commit before v1.0 (see HANDOFF).
-        .package(url: "https://github.com/soniqo/speech-swift.git", branch: "main"),
+        // Qwen3-ASR (MLX + CoreML) — Apache-2.0.
+        .package(url: "https://github.com/soniqo/speech-swift.git", revision: "1e6e0e527be00e9c0ac79ebb255ea54cd6e9dd80"),
         // Moonshine Voice — ships Moonshine.xcframework as a binary target.
         .package(url: "https://github.com/moonshine-ai/moonshine-swift.git", from: "0.1.5"),
     ],
