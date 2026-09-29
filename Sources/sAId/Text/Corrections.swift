@@ -59,7 +59,7 @@ struct ProtectedText {
             let code = #"[\p{L}\p{M}][/_\.][\p{L}\p{M}]|_"#
             if !Self.matches(#"\p{N}"#, in: token).isEmpty ||
                 !Self.matches(code, in: token).isEmpty ||
-                !Self.matches(#"(?i)^(?:[a-z][a-z0-9+.-]*://|www\.)"#, in: token).isEmpty {
+                !Self.matches(#"(?i)(?<![\p{L}\p{M}\p{N}])(?:[a-z][a-z0-9+.-]*://|www\.)"#, in: token).isEmpty {
                 protected.replaceSubrange(match.range.location..<NSMaxRange(match.range), with: repeatElement(true, count: match.range.length))
             }
         }
@@ -68,6 +68,10 @@ struct ProtectedText {
     static func matches(_ pattern: String, in text: String) -> [NSTextCheckingResult] {
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
         return regex.matches(in: text, range: NSRange(location: 0, length: text.utf16.count))
+    }
+
+    static func normalizedSource(_ source: String) -> String {
+        source.split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
 
     static func wordPattern(_ source: String, filler: Bool = false) -> String? {
@@ -99,9 +103,12 @@ struct ProtectedText {
         let snapshot = string
         var chosen: [(NSRange, String)] = []
         // Select all matches against the original input: replacements never cascade.
-        for rule in corrections.enumerated().sorted(by: {
-            $0.element.from.count == $1.element.from.count ? $0.offset < $1.offset : $0.element.from.count > $1.element.from.count
-        }).map(\.element) {
+        let ranked = corrections.enumerated().map {
+            (order: $0.offset, rule: $0.element, length: Self.normalizedSource($0.element.from).count)
+        }
+        for rule in ranked.sorted(by: {
+            $0.length == $1.length ? $0.order < $1.order : $0.length > $1.length
+        }).map(\.rule) {
             guard let pattern = Self.wordPattern(rule.from) else { continue }
             for match in Self.matches(pattern, in: snapshot) where !isProtected(match.range) {
                 guard !chosen.contains(where: { NSIntersectionRange($0.0, match.range).length > 0 }) else { continue }

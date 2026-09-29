@@ -64,6 +64,31 @@ final class PostProcessTests: XCTestCase {
         XCTAssertTrue(CorrectionsStore.defaultURL.path.hasSuffix("sAId/corrections.json"))
     }
 
+    func testWrappedSingleLabelURLsStayProtected() {
+        let pp = PostProcess(corrections: [.init(from: "localhost", to: "LOCALHOST")], fillers: ["um"])
+        XCTAssertEqual(pp.apply("(https://um)"), "(https://um)")
+        XCTAssertEqual(pp.apply("(https://localhost)"), "(https://localhost)")
+        XCTAssertEqual(pp.apply("\"https://um\""), "\"https://um\"")
+        XCTAssertEqual(pp.apply("see (https://localhost) and \"https://um\""), "See (https://localhost) and \"https://um\"")
+    }
+
+    func testFillerPunctuationPreservesMeaningfulSeparators() {
+        let pp = PostProcess(corrections: [], fillers: ["um", "you know"])
+        XCTAssertEqual(pp.apply("hello, um."), "Hello.")
+        XCTAssertEqual(pp.apply("note: um, hello"), "Note: hello")
+        XCTAssertEqual(pp.apply("note; um, hello"), "Note; hello")
+        XCTAssertEqual(pp.apply("um!"), "")
+        XCTAssertEqual(pp.apply("um?"), "")
+        XCTAssertEqual(pp.apply("hello, um!"), "Hello!")
+        XCTAssertEqual(pp.apply("it is, you know, fine"), "It is fine")
+    }
+
+    func testLongestCorrectionUsesNormalizedWhitespace() {
+        let pp = PostProcess(corrections: [.init(from: "live       ", to: "LIVE"), .init(from: "mimo live", to: "mimoLive")], fillers: [])
+        XCTAssertEqual(pp.apply("mimo live"), "mimoLive")
+        XCTAssertEqual(pp.apply("mimo   live"), "mimoLive")
+    }
+
     func testValuesAreSendable() {
         func requireSendable<T: Sendable>(_ value: T) {}
         requireSendable(PostProcess())
