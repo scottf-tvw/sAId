@@ -37,7 +37,7 @@ This revision replaces the original sample implementations, which contained conc
 - `Insert/`: pasteboard snapshot, insertion transaction, Unicode strategy.
 - `UI/`: HUD, menu, settings, history, permissions.
 - `Support/`: existing logger; history, settings, permissions.
-- `Tests/sAIdTests/`: unit and opt-in contract tests. `Tests/Fixtures/`: three synthetic speech WAVs and reference text.
+- `Tests/sAIdTests/`: unit and opt-in contract tests. `Tests/Fixtures/`: three attributed LibriSpeech WAVs and reference text.
 - `Resources/`: default corrections/fillers, icon if an SF Symbol is insufficient.
 - `project.yml`, `Info.plist`, `sAId.entitlements`, `Makefile`, `scripts/`: app build/install/release/benchmark.
 
@@ -48,7 +48,7 @@ protocol FinalTranscriber: Sendable {
     func transcribe(_ pcm16k: [Float]) async throws -> String
 }
 protocol PreviewTranscriber: AnyObject, Sendable {
-    func start() async throws -> AsyncStream<PreviewLine>
+    func start() async throws -> AsyncThrowingStream<PreviewLine, Error>
     func feed(_ pcm16k: [Float]) async throws
     func stop() async
 }
@@ -129,17 +129,17 @@ Also cover whole-word Unicode boundaries, multiword longest-first corrections, l
 
 ### Task 7: Shared resident Moonshine engine, download/cache, live preview
 
-**Files:** modify `Sources/sAId/Engines/EngineProtocols.swift`; create `Sources/sAId/Engines/MoonshineEngine.swift`, `ModelCache.swift` and small download/checksum helpers as needed; tests `Tests/sAIdTests/MoonshinePreviewEngineTests.swift`, `ModelCacheTests.swift`; copy synthetic WAVs/reference JSON/provenance into `Tests/Fixtures/`.
+**Files:** modify `Sources/sAId/Engines/EngineProtocols.swift`; create `Sources/sAId/Engines/MoonshineEngine.swift`, `ModelCache.swift` and small download/checksum helpers as needed; tests `Tests/sAIdTests/MoonshinePreviewEngineTests.swift`, `ModelCacheTests.swift`; copy redistributable LibriSpeech WAVs/reference JSON/provenance into `Tests/Fixtures/`.
 
 **Interfaces:** amend `PreviewTranscriber.start()` to return `AsyncThrowingStream<PreviewLine, Error>` and keep `stop() async`; a native stop-time error finishes that session stream with an error, retaining the model for final transcription. `actor MoonshineEngine: PreviewTranscriber` with `init(modelRoot: URL = defaultModelRoot)`, `load(progress: (@Sendable (Double, String) -> Void)?) async throws`, and keyterm configuration. Task 8 adds `FinalTranscriber` to the SAME actor/model. `PreviewLine.text` is aggregated whole-utterance text, not only the latest native line.
 
-- [ ] Unit tests first for cache completeness/corruption, atomic downloads, primary failure → official mirror, checksum failure, progress clamping, cancellation, and keyterm sanitization. Use injected local HTTP/data transport; no unit-test network.
-- [ ] TDD preview adapter lifecycle via a narrow native-runtime seam: fresh stream per start, stop/close once, two sequential utterances, ordered line updates replacing matching IDs, partial→completed text, start/feed failure, later recovery, no model unload on stop.
-- [ ] Implement one actor owning native `Transcriber` and at most one current `Stream`. Serialize native calls, never run on main actor, finish per-session AsyncStreams. Inspect upstream deinit/close to avoid double frees. Feed errors propagate; native TranscriptError callbacks are surfaced without silently dropping failures.
-- [ ] Cache root `~/Library/Application Support/sAId/models/moonshine/`; use native catalog `.stt(language:"en", modelArch:.mediumStreaming)`. Native C dependency API is available if needed for manifest access; don't duplicate a guessed filename list. Validate safe paths, sizes and available catalog checksums. CDN failure falls back to equivalent `https://huggingface.co/moonshine-ai/moonshine-voice-assets/resolve/main/` asset paths. Complete cache requires no network.
-- [ ] The implementation-session CDN returned 403; exact files were downloaded from the official mirror and SHA-verified in the default cache. The model is ready for offline contract tests. Do not delete or overwrite unrelated caches.
-- [ ] Add opt-in `SAID_MODEL_TESTS=1` tests with three real WAV fixtures; absent/incomplete model skips without downloading. Assert meaningful nonempty transcript and conservative WER ceiling, then another session to detect dead-stream regressions. Test helpers locate fixtures using source-relative paths, not Bundle.module.
-- [ ] Run unit suite and offline model tests; record actual transcripts/latency and any platform limits; commit.
+- [x] Unit tests first for cache completeness/corruption, atomic downloads, primary failure → official mirror, checksum failure, progress clamping, cancellation, and keyterm sanitization. Use injected local HTTP/data transport; no unit-test network.
+- [x] TDD preview adapter lifecycle via a narrow native-runtime seam: fresh stream per start, stop/close once, two sequential utterances, ordered line updates replacing matching IDs, partial→completed text, start/feed failure, later recovery, no model unload on stop.
+- [x] Implement one actor owning native `Transcriber` and at most one current `Stream`. Serialize native calls, never run on main actor, finish per-session AsyncThrowingStreams. Inspect upstream deinit/close to avoid double frees. Feed errors propagate; native TranscriptError callbacks are surfaced without silently dropping failures.
+- [x] Cache root `~/Library/Application Support/sAId/models/moonshine/`; use native catalog `.stt(language:"en", modelArch:.mediumStreaming)`. Native C dependency API is available if needed for manifest access; don't duplicate a guessed filename list. Validate safe paths, sizes and available catalog checksums. CDN failure falls back to equivalent `https://huggingface.co/moonshine-ai/moonshine-voice-assets/resolve/main/` asset paths. Complete cache requires no network.
+- [x] The implementation-session CDN returned 403; exact files were downloaded from the official mirror and SHA-verified in the default cache. The model is ready for offline contract tests. Do not delete or overwrite unrelated caches.
+- [x] Add opt-in `SAID_MODEL_TESTS=1` tests with three real WAV fixtures; absent/incomplete model skips without downloading. Assert meaningful nonempty transcript and conservative WER ceiling, then another session to detect dead-stream regressions. Test helpers locate fixtures using source-relative paths, not Bundle.module.
+- [x] Run unit suite and offline model tests; record actual transcripts/latency and any platform limits; commit.
 
 ### Task 8: Moonshine final transcription on the same model
 

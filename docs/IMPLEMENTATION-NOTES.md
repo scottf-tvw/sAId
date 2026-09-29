@@ -13,12 +13,14 @@ The design is the authority when an implementation-plan code sample disagrees wi
 - Represent insertion explicitly and retain the final text. Preview text is only eligible for History when final transcription fails.
 - Queue a new press during finalization/insertion only while that key remains held. Releasing or canceling it withdraws the pending request; capture never overlaps insertion.
 - Tag asynchronous session work and timers so late results cannot affect another utterance.
-- Preserve audio ordering and drain captured chunks before final inference. Preview failures must not discard final-engine audio.
+- Preserve audio ordering and drain captured chunks before final inference and before deciding whether a release was a short tap. Queued samples count toward the actual audio duration. Preview failures must not discard final-engine audio.
+- A preview error emitted during stop must still be logged even after the reducer has entered finalization; it must not disable the final path or affect a later session.
 - Use checked Swift concurrency outside the shared third-party engine adapter. Plan examples using `@unchecked Sendable` for capture, hotkey, history, or fakes need replacement.
 - Rebuild audio capture after a device configuration change or wake. These paths require the real-hardware smoke tests even when lifecycle unit tests pass.
 - Restore the previous clipboard on success, failure, and cancellation. If the user copies something new meanwhile, preserve their newer clipboard content.
 - A posted keyboard event has no universal receipt from the target app. Offer a selectable direct-Unicode insertion strategy for apps that ignore paste, and automatic fallback only for failures known to precede event delivery. Never claim that event creation proves a target field accepted text.
 - Keep numbers, URLs, identifiers, and correction replacement casing protected across the whole post-processing pipeline.
+- Publish only fixtures with clear redistribution rights: three CC BY 4.0 LibriSpeech clips with attribution, source IDs and hashes. Earlier Apple System Voice recordings stay local and are not repository fixtures.
 - Keep model contract tests explicitly opt-in and offline. Missing weights cause a skip; ordinary unit tests must not download models or access the microphone.
 
 ## Build environment
