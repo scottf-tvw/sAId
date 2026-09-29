@@ -40,11 +40,14 @@ final class SystemInsertionPasteboard: InsertionPasteboard {
     var changeCount: Int { pasteboard.changeCount }
 
     func readItems() throws -> [[String: Data]] {
-        let board = pasteboard
-        guard let items = board.pasteboardItems else {
-            guard board.types?.isEmpty != false else { throw TextInsertionError.snapshotFailed }
-            return []
-        }
+        try Self.materialize(pasteboard.pasteboardItems)
+    }
+
+    /// Interpret the native read result before any mutation. Kept separate from the global clipboard.
+    static func materialize(_ nativeItems: [NSPasteboardItem]?) throws -> [[String: Data]] {
+        // NSPasteboard documents nil as retrieval failure; only an actual empty array
+        // establishes an empty clipboard. A second metadata read cannot prove otherwise.
+        guard let items = nativeItems else { throw TextInsertionError.snapshotFailed }
         return try items.map { item in
             var representations: [String: Data] = [:]
             for type in item.types {

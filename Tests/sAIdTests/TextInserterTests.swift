@@ -39,6 +39,37 @@ final class TextInserterTests: XCTestCase {
         XCTAssertTrue(events.posted.isEmpty)
     }
 
+    func testNativeNilItemsCannotBecomeEmptySnapshot() async {
+        let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
+        // Exercise the same nil-result interpretation as the native adapter. There is no
+        // fallback to a types read: nil items are unreadable even when metadata is also nil.
+        board.readOverride = { try SystemInsertionPasteboard.materialize(nil) }
+        await expect(.snapshotFailed) { try await self.make(board, events, fallback: false).insert("text") }
+        XCTAssertEqual(board.items, rich)
+        XCTAssertEqual(board.clears, 0)
+        XCTAssertEqual(board.writes, 0)
+        XCTAssertTrue(events.posted.isEmpty)
+    }
+
+    func testNativeNilItemsCanFallbackWithoutMutatingClipboard() async throws {
+        let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
+        board.readOverride = { try SystemInsertionPasteboard.materialize(nil) }
+        try await make(board, events).insert("text")
+        XCTAssertEqual(board.items, rich)
+        XCTAssertEqual(board.clears, 0)
+        XCTAssertEqual(board.writes, 0)
+        XCTAssertEqual(events.posted, ["unicode0"])
+    }
+
+    func testNativeEmptyItemsRemainValidEmptySnapshot() async throws {
+        let board = FakeInsertionPasteboard([]), events = FakeInsertionEvents()
+        board.readOverride = { try SystemInsertionPasteboard.materialize([]) }
+        try await make(board, events, fallback: false).insert("text")
+        XCTAssertEqual(board.items, [])
+        XCTAssertEqual(board.clears, 2)
+        XCTAssertEqual(events.posted, ["pasteDown", "pasteUp"])
+    }
+
     func testClipboardChangingDuringSnapshotIsNotOverwritten() async {
         let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
         board.onRead = { board.externalCopy("new copy") }
@@ -243,6 +274,7 @@ private final class FakeInsertionPasteboard: InsertionPasteboard {
     var changeCount = 0
     var reads = 0, clears = 0, writes = 0
     var readFailure = false
+    var readOverride: (() throws -> [[String: Data]])?
     var failedWrites: Set<Int> = []
     var onRead: (() -> Void)?
     var onWrite: (() -> Void)?
@@ -250,6 +282,7 @@ private final class FakeInsertionPasteboard: InsertionPasteboard {
     func readItems() throws -> [[String: Data]] {
         reads += 1
         if readFailure { throw TextInsertionError.snapshotFailed }
+        if let readOverride { return try readOverride() }
         let snapshot = items
         onRead?()
         return snapshot
