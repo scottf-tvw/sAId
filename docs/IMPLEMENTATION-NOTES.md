@@ -14,7 +14,7 @@ The design is the authority when an implementation-plan code sample disagrees wi
 - Queue a new press during finalization/insertion only while that key remains held. Releasing or canceling it withdraws the pending request; capture never overlaps insertion.
 - Tag asynchronous session work and timers so late results cannot affect another utterance.
 - Preserve audio ordering and drain captured chunks before final inference. Preview failures must not discard final-engine audio.
-- Use checked Swift concurrency outside the two third-party engine adapters. Plan examples using `@unchecked Sendable` for capture, hotkey, history, or fakes need replacement.
+- Use checked Swift concurrency outside the shared third-party engine adapter. Plan examples using `@unchecked Sendable` for capture, hotkey, history, or fakes need replacement.
 - Rebuild audio capture after a device configuration change or wake. These paths require the real-hardware smoke tests even when lifecycle unit tests pass.
 - Restore the previous clipboard on success, failure, and cancellation. If the user copies something new meanwhile, preserve their newer clipboard content.
 - A posted keyboard event has no universal receipt from the target app. Offer a selectable direct-Unicode insertion strategy for apps that ignore paste, and automatic fallback only for failures known to precede event delivery. Never claim that event creation proves a target field accepted text.
