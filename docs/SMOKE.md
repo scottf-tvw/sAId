@@ -4,7 +4,7 @@ Run on real hardware after any change to Hotkey, AudioCapture, Inserter, HUD or 
 These are Scott's to verify; an agent reports them as "needs smoke" in the PR, never as done.
 
 Setup: copy something distinctive to the clipboard first (e.g. `CLIPBOARD-SENTINEL-42`).
-After each row, paste (⌘V) somewhere harmless and confirm the sentinel is back.
+After each row, paste (⌘V) somewhere harmless and confirm the sentinel is back. All rows below are **needs smoke** until Scott records a result; automated tests do not satisfy them. Scott controls sleep, permissions and real app input; the agent must not lock the Mac or run these actions through desktop automation.
 
 | # | Target | Steps | Pass when |
 |---|---|---|---|
@@ -21,10 +21,20 @@ After each row, paste (⌘V) somewhere harmless and confirm the sentinel is back
 | 11 | Cap | hold ⌥ for > 120 s | HUD warns at the cap and finalizes on its own |
 | 12 | Live preview | hold ⌥, speak slowly | words appear in the HUD within ~0.5 s of being spoken |
 | 13 | Corrections | say a word in `corrections.json` (e.g. "invintus") | pasted text shows the corrected form |
-| 14 | Filler removal | say "um, so, uh, this is a test" | fillers gone; "So, this is a test." |
+| 14 | Filler removal | say "um, so, uh, this is a test" | configured fillers gone; remaining words preserved |
 | 15 | Mic switch | change input device in Settings while idle, dictate | audio from the new device |
 | 16 | Device removed mid-utterance | unplug the USB mic while holding ⌥ | HUD error; next press works after re-plug |
 | 17 | Sleep/wake | sleep the Mac, wake, dictate | works without relaunch |
 | 18 | TCC reset | `tccutil reset ListenEvent org.tvw.said`, press ⌥ | menu glyph amber; checklist reopens; re-grant → works |
-| 19 | Models missing | delete the Moonshine model dir, launch | "Loading models…" then re-download; dictation refused until ready |
-| 20 | Memory | leave running 8 h, dictate periodically | RSS stable (~2.5 GB), no growth |
+| 19 | Model reset/retry | use Settings → Models → Reset, confirm the app-owned cache reset, then retry | progress shown during download/load; dictation refused until ready; unrelated files untouched |
+| 20 | Memory | record RSS after model load and a few warm-up utterances; leave running 8 h and dictate periodically | one resident model; footprint settles near the measured baseline without sustained growth; record actual values |
+| 21 | Both Option keys | hold Left Option, press and hold Right Option, release only Right Option | dictation finalizes even while Left Option stays held; next press works |
+| 22 | Cancel/repeat | start, Esc, release Right Option, then start another utterance | canceled text is not pasted; subsequent live preview and final insertion work |
+| 23 | Queued press | press Right Option again while prior transcript finalizes; test held and early-released variants | held press starts after prior insertion completes; an already released press does not start capture |
+| 24 | Newer clipboard content | copy something new while dictation is restoring its temporary clipboard text | newer clipboard content survives; older sentinel is not restored over it |
+| 25 | Unicode strategy | select direct Unicode insertion and dictate into an app that ignores paste | one copy of the final text appears; emoji/accented text survives; clipboard stays intact |
+| 26 | Offline launch | with a complete model cache, disconnect networking and relaunch | model becomes ready and preview/final dictation work without a download |
+| 27 | Dictation toggle | turn dictation off during capture, release, then re-enable and dictate | active capture stops without pasting; hotkey is gated while off; next session works |
+| 28 | Settings persistence | edit/import/export corrections, empty the list intentionally, adjust fillers/trailing space, relaunch | choices persist and affect subsequent utterances; an empty list stays empty; export/import round trip works |
+| 29 | History recovery | trigger a secure-input refusal, open History, copy the failed transcript, then clear History | final text and correct target app are present; Copy works; all History views agree after Clear |
+| 30 | HUD focus | dictate with the cursor in a target field and pointer on a different display | HUD appears on the pointer's screen, never takes focus or intercepts clicks, and fades after completion |

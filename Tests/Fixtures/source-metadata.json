@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1272-128104-0000",
+    "source_sha256": "4e25e22555cd16e90edb0a3b49fdcf1fe652b2a1250ab643634db33895c75b41",
+    "wav_sha256": "71d629d35159339bc046f2d4502d4eb4ed03fd4991e49256f0d21e5fde6c4edd",
+    "seconds": 5.855
+  },
+  {
+    "id": "1272-128104-0005",
+    "source_sha256": "870faa0669d19ca8416b9923cdf722ba9fd6ccce766a50583fa9c0f808b39eba",
+    "wav_sha256": "b60bb1e091c4cacf8910e612a8073cc46c8aaac41ed3e30941d380661380912f",
+    "seconds": 9.01
+  },
+  {
+    "id": "1272-128104-0008",
+    "source_sha256": "08a3f099d544fac5df1b6105bfd4952d911995f271b494c9a689c083c39ab855",
+    "wav_sha256": "a5f5d4703e7da00ecce8820b3c61e50df90763f0e73c2916629ab3091b0fd5f4",
+    "seconds": 5.12
+  }
+]
