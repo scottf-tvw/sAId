@@ -19,8 +19,10 @@ verified. Hardware acceptance remains pending: actual microphone capture, hotkey
 focus, insertion/clipboard behavior, permission recovery, and the eight-hour residency test need
 Scott's checks in [SMOKE.md](docs/SMOKE.md). Automated tests do not establish those results.
 
-The implementation is on `task/11-packaging-benchmark`; PRs #1–11 remain open and unmerged pending
-approval, with Task 11 review/PR still to follow. See [HANDOFF.md](docs/HANDOFF.md).
+The reviewed implementation is on `task/11-packaging-benchmark`; [PR #12](https://github.com/scottf-tvw/sAId/pull/12)
+contains the final integration and packaging work. PRs #1–12 remain open and unmerged pending approval.
+The signed Release app is installed at `/Applications/sAId.app` on the implementation Mac and has not
+been launched. Two nonblocking follow-ups and the full verification record are in [HANDOFF.md](docs/HANDOFF.md).
 
 ## Build and install
 

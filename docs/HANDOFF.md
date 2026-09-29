@@ -26,7 +26,8 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - [PR #9](https://github.com/scottf-tvw/sAId/pull/9): final transcription on the same resident model; review clean.
 - [PR #10](https://github.com/scottf-tvw/sAId/pull/10): ordered controller and nonactivating HUD; review clean.
 - [PR #11](https://github.com/scottf-tvw/sAId/pull/11): full app shell, settings, History, permission recovery and signed bundle; review clean.
-- PRs #1–11 remain open and unmerged pending approval. Task 11 is complete at `42419f9`/`1cbf097`; its task review and scoped re-review approved. Its PR remains pending. The final whole-branch review found three scoped fixes; the consolidated fix wave is implemented and awaiting scoped re-review.
+- [PR #12](https://github.com/scottf-tvw/sAId/pull/12): shared benchmark, safe signed packaging and final integration fixes; reviewed and installed.
+- PRs #1–12 remain open and unmerged pending approval. Task 11 is complete at `42419f9`/`1cbf097`; task review and scoped re-review approved. The final whole-branch review and one consolidated fix/re-review wave are complete at `77232c8`: all three requested fixes are accepted, with two nonblocking follow-ups documented below.
 - Task 10 app shell/signed bundle is complete at `c35013e`/`a149c35`, base `75185b8`; independent review approved, menu-error fix re-review clean.
 - Task 9 controller/HUD is complete at `f1c3b3d`, review clean; 164 strict tests pass with two expected opt-in skips.
 - Task 7 Moonshine adapter/cache/preview is complete at `8a01472`, review clean; all 127 strict tests pass with cached-model contracts enabled. Task 8 final transcription is complete at `f1b24cd`, review clean.
@@ -52,7 +53,7 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 
 7. Task 6: clipboard-safe insertion and selectable Unicode fallback; restore on cancellation/failure, preserve newer clipboard contents, reject concurrent transactions, refuse secure input. Generated events bypass hotkey handling. Nil native clipboard reads fail before mutation. **108 tests pass**, review clean after one fix round.
 
-The full app shell, settings, persistent History, permission UI and signed Debug bundle are implemented in Task 10. Task 11 packaging and temporary-destination installation are now verified; scoped final re-review, actual /Applications installation and hardware acceptance remain.
+The full app shell, settings, persistent History, permission UI and signed Debug bundle are implemented in Task 10. Task 11 packaging, final review and actual `/Applications/sAId.app` Release installation are verified. Hardware acceptance and actual notarization remain pending.
 
 8. Task 7: one resident actor-owned Moonshine model, fresh preview streams, aggregated line updates, explicit stop-time errors, validated atomic downloads and official mirror fallback. **127 tests pass**, including six offline native sessions; review clean.
 
@@ -68,7 +69,7 @@ The full app shell, settings, persistent History, permission UI and signed Debug
 - `make build` and `make test` pass with complete strict concurrency and warnings as errors: **169 XCTest cases, two expected opt-in skips, 0 failures; 12 Swift Testing cases, 0 failures; 8 Python packaging tests, 0 failures**. Parser tests reject truncated/malformed audio and preserve signed PCM sample values; WER tests cover literal numbers, edits, empty references and corpus weighting. Existing ordering/reset tests pass after extraction.
 - `SAID_MODEL_TESTS=1 swift test -Xswiftc -strict-concurrency=complete -Xswiftc -warnings-as-errors --filter 'MoonshineModelContractTests|MoonshineFinalEngineTests'`: **11 tests, no skips or failures**, including repeated offline preview/final sessions on the resident model.
 - Signed Debug and Release `.app` builds pass signature/designated-requirement/team checks, arm64, hardened runtime, exactly the audio-input entitlement, and byte-for-byte bundled default/notices checks. App identity is `org.tvw.said`, version 1.0.0, minimum macOS 15. Apple emits one non-Swift warning that AppIntents metadata extraction is skipped without that framework dependency.
-- `make install` was exercised with a real prior signed app at `build/task11-install.c0JAae/Applications/sAId.app`; it built Release, verified the staged copy, replaced the previous app, and never launched it. Resulting executable matches the Release build. Actual `/Applications/sAId.app` installation remains parent-owned after review.
+- `make install` was exercised with a real prior signed app at `build/task11-install.c0JAae/Applications/sAId.app`; it built Release, verified the staged copy, replaced the previous app, and never launched it. Resulting executable matches the Release build. The subsequent reviewed actual `/Applications/sAId.app` installation is recorded below.
 - An owned copy of the release benchmark at `build/task11-hardened-bench.ogca9L/said-bench` is signed by the same Developer ID with hardened runtime and exactly the app's audio-input entitlement. Its offline inference succeeds; no broader entitlement was needed. This validates native loading under that policy, not GUI/TCC behavior.
 - Bash 3.2 packaging tests prove build/generation/copy/signature/extra-entitlement/staged-verification/swap failures preserve the old app; failed rollback retains a recoverable backup. Notary submission failure, non-Accepted status and staple failures leave no final release ZIP. Make/benchmark failures propagate. Release changes the actual staged bundle version, signs/verifies, requires accepted notarization and a validated staple, then archives. No actual notarization or publication was attempted; the Keychain profile remains absent.
 - Task 11 packaging review fixes: install backup/publication/rollback and final ZIP publication now use macOS `renamex_np(..., RENAME_EXCL)` through a small C helper compiled with the selected Xcode SDK. A destination appearing immediately before publication or rollback is left untouched; a blocked rollback retains the prior app and reports its recovery path. Installer destination locks fail immediately if occupied, and stale locks require manual recovery after confirming the prior installer is gone. **15 focused packaging/native-helper tests pass**, including deterministic install/rollback/release destination races, fresh-install conflict diagnostics, existing file/directory/symlink rejection, and concurrent native publication with exactly one winner. A new real temporary installation also passes; unchanged Swift/native/full suites were not repeated for this shell/helper correction. See the appended Task 11 fix report and `task-11-races-green.log`.
@@ -92,7 +93,15 @@ The hardened signed copy produced identical edit/reference counts and hypotheses
 - Capture start/stream and insertion failures now log once at the owned worker boundary, using allowlisted categories or known Core Audio numeric status. These diagnostics exclude arbitrary error descriptions, transcript/correction contents and clipboard bytes; History and cleanup behavior remain intact.
 - Fresh strict `make test`: **176 XCTest cases, two expected opt-in native skips, zero failures; 12 Swift Testing cases, zero failures; 15 Python packaging/helper cases, zero failures**. Seven new regressions include physical listener → production bridge → controller cancellation with gated final inference, pending presses behind cleanup, queued cancellation, cap expiry/stale timers and safe diagnostics. A deliberate pending-state mutation failed four assertions, then passed after restoration.
 - Fresh signed Debug and Release builds pass identity/team/designated-requirement, arm64, hardened-runtime, exact audio-input entitlement and bundled resource-byte checks. The only build warning is the already documented AppIntents metadata-extraction skip. No unchanged native inference/benchmark rerun was needed; shared Moonshine ownership and model code are unchanged.
-- Evidence: `.superpowers/sdd/2026-09-29-said-implementation/final-fix-report.md` and `final-fix-*.log` (ignored). Scoped re-review and actual installation remain parent-owned. The nonblocking permission-poll lifecycle coverage stays deferred; all 30 human smoke rows and actual notarization remain pending.
+- Scoped final re-review accepted all three fixes with no new Critical/Important breakage. A Minor diagnostic issue remains: cancellation during capture startup can log `capture start: unknown` because the catch checks the consumer task rather than the canceled startup task. This does not affect cancellation/cleanup or log content privacy. Defer a targeted regression/filter correction; interpret that startup-cancellation log cautiously. Direct permission-poll lifecycle regression coverage also remains deferred after review found no current polling defect.
+- Evidence: `.superpowers/sdd/2026-09-29-said-implementation/final-fix-report.md`, `final-fix-review.md` and `final-fix-*.log` (ignored). All 30 human smoke rows and actual notarization remain pending.
+
+## Installed app (2026-09-29)
+
+- Reviewed source commit: `77232c8`. `SAID_CONFIGURATION=Release SAID_INSTALL_DEST=/Applications/sAId.app make install` completed successfully; the installed app has not been launched.
+- `/Applications/sAId.app` passes strict signature/designated-requirement/team checks, hardened runtime, arm64, exactly the audio-input entitlement and bundled default/notices byte comparisons. Its executable matches the Release product: SHA256 `d39d9991b51adccab8937a207f050a71f3bc34be7a01921d445150dcf47777d5`.
+- Installer lock and owned staging directory were removed. No previous app existed, and no other application was replaced. Logs: `final-install.log` and `final-installed-verification.log` in the ignored SDD directory.
+- Agent-owned implementation, automated verification, review, installation and task PR work are complete. Live acceptance and a notarized distribution ZIP still require the human actions below.
 
 ## Current interfaces
 
@@ -124,7 +133,7 @@ Controller integration: `send(action,target:)` is synchronous/nonisolated and be
 
 ## Build and runtime facts
 
-- Swift 6.3.3 / Xcode 26.6; current baseline builds without warnings.
+- Swift 6.3.3 / Xcode 26.6; no Swift compiler warnings. Signed builds emit the documented Apple AppIntents metadata-extraction skip warning.
 - Each worktree needs its own `.build`. Symlinking the original cache produced duplicate absolute module paths and compiler crashes; a clean independent build passed.
 - xcodegen is installed. Developer ID identity exists for **Scott DL Freeman, team M2TEAF948X**; verify it when configuring packaging.
 - SPM alone does not produce the final .app bundle/TCC identity. Task 10 created the Xcodegen project and signed app at `build/Build/Products/Debug/sAId.app` in the active worktree. Bundle checks confirm org.tvw.said, macOS15, arm64, LSUIElement and microphone purpose, Developer ID team M2TEAF948X, hardened runtime, and only audio-input entitlement. No GUI launch was performed.
@@ -133,11 +142,11 @@ Controller integration: `send(action,target:)` is synchronous/nonisolated and be
 
 ## Next work
 
-Parent: complete scoped re-review of the consolidated final fixes, create the remaining PR, then install the reviewed signed app in `/Applications/sAId.app`. Task 11 has passed task review after both installer/release destination races were fixed and re-reviewed. Merge approval is still pending. Do not launch it or perform desktop automation on Scott's behalf.
+Implementation and reviews are complete, the signed app is installed at `/Applications/sAId.app`, and PR #12 is open and attached. Merge approval is still pending. Keep the worktree for PR feedback and live acceptance; do not merge, launch the app or perform desktop automation on Scott's behalf. This thread is long: use this handoff and the saved project memory to start a fresh thread for smoke results.
 
 First human milestone: Scott launches the app, grants Microphone/Input Monitoring/Accessibility through its checklist, waits for Models ready, copies a distinctive clipboard sentinel and dictates in **Notes** with Right Option. He should observe live words, one final insertion on release, then verify that pasting elsewhere restores the original sentinel. Record his report in `docs/SMOKE.md`; all 30 manual matrix rows remain **needs smoke**, including real paste delivery, secure-input refusal, focus, device changes, sleep/wake, and eight-hour memory residency.
 
-The notarization Keychain profile `said-notary` is absent. The completed release pipeline can be used after Scott provisions it interactively in his own terminal:
+The last profile check found `said-notary` absent. The existing human question about provisioning it has no answer yet; do not treat the preselected signed-local option as a submitted choice. The completed release pipeline can be used after Scott provisions it interactively in his own terminal:
 
 ```bash
 xcrun notarytool store-credentials said-notary --team-id M2TEAF948X
@@ -146,4 +155,4 @@ make release VERSION=1.0.0
 
 Do not send credentials through chat or source files. No credentials were read and no additional profiles probed. Signed local builds are ready without notarization; a notarized distribution ZIP has not been created.
 
-Scott uses this Mac through Splashtop. **Never lock the screen or invoke a Computer Use lock workflow.** No microphone capture, TCC request/grant, keyboard/paste/clipboard operation, GUI launch, screen capture, or desktop automation occurred in this task. All test/build/benchmark subprocesses have completed; there are no idle waiters. The real signed temporary installation and hardened CLI are retained as review artifacts under ignored `build/`.
+Scott uses this Mac through Splashtop. **Never lock the screen or invoke a Computer Use lock workflow.** No microphone capture, TCC request/grant, keyboard/paste/clipboard operation, GUI launch, screen capture, or desktop automation occurred in this task. All test/build/benchmark/install/review subprocesses have completed; there are no idle waiters. The real signed temporary installation and hardened CLI are retained as review artifacts under ignored `build/`.

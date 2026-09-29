@@ -3,7 +3,7 @@
 Run on real hardware after any change to Hotkey, AudioCapture, Inserter, HUD or Permissions.
 These are Scott's to verify; an agent reports them as "needs smoke" in the PR, never as done.
 
-First milestone (still **needs smoke**): after the reviewed app is installed, launch it manually,
+First milestone (still **needs smoke**): the reviewed Release app is installed at `/Applications/sAId.app`. Launch it manually,
 grant Microphone/Input Monitoring/Accessibility in its checklist, and wait for Models ready. Copy
 `CLIPBOARD-SENTINEL-42`, place the cursor in **Notes**, hold **Right Option**, speak, and release.
 Confirm live words in the HUD, exactly one final insertion, and restoration of the sentinel when
