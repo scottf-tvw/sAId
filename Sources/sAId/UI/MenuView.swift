@@ -10,6 +10,11 @@ struct MenuView: View {
     var body: some View {
         Toggle("Dictation on", isOn: Binding(get: { settings.preferences.enabled }, set: { value in model.updatePreferences { $0.enabled = value } }))
         Text(model.statusText).font(.caption)
+        if let error = model.actionError {
+            Text(error).font(.caption)
+            Button("Resolve in Settings…", action: showSettings)
+            Button("Dismiss error") { model.actionError = nil }
+        }
         if !model.permissions.allGranted || model.tapError != nil { Button("Permissions…", action: showPermissions) }
         if model.canRetry { Button("Retry model", action: model.retryModel) }
         Divider()
