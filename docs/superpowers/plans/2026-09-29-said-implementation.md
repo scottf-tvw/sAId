@@ -41,7 +41,7 @@ This revision replaces the original sample implementations, which contained conc
 - `Resources/`: default corrections/fillers, icon if an SF Symbol is insufficient.
 - `project.yml`, `Info.plist`, `sAId.entitlements`, `Makefile`, `scripts/`: app build/install/release/benchmark.
 
-Existing engine interfaces (consume these verbatim):
+Existing engine interfaces (Task 7 changes the preview return to AsyncThrowingStream so native asynchronous errors, including stop-time failures, can reach the controller):
 ```swift
 struct PreviewLine: Sendable, Equatable { let text: String; let isFinal: Bool }
 protocol FinalTranscriber: Sendable {
@@ -55,7 +55,7 @@ protocol PreviewTranscriber: AnyObject, Sendable {
 ```
 The reducer's actual API is in `Sources/sAId/Core/`. It uses a `DictationState` struct containing readiness, phase, independent message, physical-held/queued intent, and session/timer IDs. Events/effects carry their IDs. Do not substitute the original enum-only sample. `finalText` receives postprocessed output and preserves its spacing; only a trimmed copy determines emptiness.
 
-### Task 1: Reproducible baseline — complete, engine amendment in progress
+### Task 1: Reproducible baseline — complete, Moonshine amendment complete
 
 **Files:** `Package.swift`, `Package.resolved`, `Sources/sAId/App/sAIdApp.swift`, `Tests/sAIdTests/SkeletonTests.swift`, `README.md`, `CLAUDE.md`, `NOTICE`.
 
@@ -129,9 +129,9 @@ Also cover whole-word Unicode boundaries, multiword longest-first corrections, l
 
 ### Task 7: Shared resident Moonshine engine, download/cache, live preview
 
-**Files:** create `Sources/sAId/Engines/MoonshineEngine.swift`, `ModelCache.swift` and small download/checksum helpers as needed; tests `Tests/sAIdTests/MoonshinePreviewEngineTests.swift`, `ModelCacheTests.swift`; copy synthetic WAVs/reference JSON/provenance into `Tests/Fixtures/`.
+**Files:** modify `Sources/sAId/Engines/EngineProtocols.swift`; create `Sources/sAId/Engines/MoonshineEngine.swift`, `ModelCache.swift` and small download/checksum helpers as needed; tests `Tests/sAIdTests/MoonshinePreviewEngineTests.swift`, `ModelCacheTests.swift`; copy synthetic WAVs/reference JSON/provenance into `Tests/Fixtures/`.
 
-**Interfaces:** `actor MoonshineEngine: PreviewTranscriber` with `init(modelRoot: URL = defaultModelRoot)`, `load(progress: (@Sendable (Double, String) -> Void)?) async throws`, and keyterm configuration. Task 8 adds `FinalTranscriber` to the SAME actor/model. `PreviewLine.text` is aggregated whole-utterance text, not only the latest native line.
+**Interfaces:** amend `PreviewTranscriber.start()` to return `AsyncThrowingStream<PreviewLine, Error>` and keep `stop() async`; a native stop-time error finishes that session stream with an error, retaining the model for final transcription. `actor MoonshineEngine: PreviewTranscriber` with `init(modelRoot: URL = defaultModelRoot)`, `load(progress: (@Sendable (Double, String) -> Void)?) async throws`, and keyterm configuration. Task 8 adds `FinalTranscriber` to the SAME actor/model. `PreviewLine.text` is aggregated whole-utterance text, not only the latest native line.
 
 - [ ] Unit tests first for cache completeness/corruption, atomic downloads, primary failure → official mirror, checksum failure, progress clamping, cancellation, and keyterm sanitization. Use injected local HTTP/data transport; no unit-test network.
 - [ ] TDD preview adapter lifecycle via a narrow native-runtime seam: fresh stream per start, stop/close once, two sequential utterances, ordered line updates replacing matching IDs, partial→completed text, start/feed failure, later recovery, no model unload on stop.
