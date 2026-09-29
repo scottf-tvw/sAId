@@ -1,46 +1,96 @@
 # HANDOFF — sAId (updated 2026-09-29)
 
-For the agent taking over. Read `CLAUDE.md` first, then the spec, then the plan.
+Read `CLAUDE.md`, the amended design, then the implementation plan. Scott authorized completing the project autonomously and asking for human help only when needed.
 
-## Where things stand
-- **Repo**: `github.com/scottf-tvw/sAId` (public, MIT), local `/Volumes/Work/GitDev/sAId`, branch `main`.
-- **Design approved** through §1 by Scott on 2026-09-29; §2–§10 follow the same session's decisions.
-  `docs/superpowers/specs/2026-09-29-said-dictation-design.md`. Decision table in §0 — do not reopen.
-- **Skeleton builds**: `swift build` → "Build complete! (40.49s)" on Swift 6.3.3 / Xcode 26.6 /
-  macOS 27.0 (M4 Max 36 GB), 2026-09-29. Both engine packages resolve and link:
-  - `speech-swift` @ `main` (`1e6e0e5`), product `Qwen3ASR` — plus its `SpeechCore.xcframework` v0.0.14
-  - `moonshine-swift` **0.1.5**, product `MoonshineVoice` — plus `Moonshine.xcframework` v0.1.5
-  - transitive: mlx-swift 0.31.6, mlx-swift-lm 3.31.4, hummingbird, swift-nio…
-  `Package.resolved` is committed. **Pin `speech-swift` to that commit** in Task 1 of the plan
-  (`revision:` instead of `branch:`) so builds stay reproducible.
-- No app code yet: `Sources/sAId/main.swift` is a one-line skeleton that imports both packages.
-- `docs/borrowed/` holds the Parakey regions to port (hotkey listener, text insertion, corrections,
-  filler removal) with the MIT notice; `parakey-audio-capture-…` is reference-only for two invariants.
+## Current decision
 
-## Verified API surface (from the checked-out sources, 2026-09-29)
-**speech-swift / Qwen3ASR** — `public extension Qwen3ASRModel { static func fromPretrained(modelId: String = "aufklarer/Qwen3-ASR-0.6B-MLX-4bit", cacheDir: URL? = nil, offlineMode: Bool = false, progressHandler: ((Double, String) -> Void)? = nil) async throws -> Qwen3ASRModel }`; 1.7B = `"aufklarer/Qwen3-ASR-1.7B-MLX-8bit"` (`ASRModelSize.large`); `transcribe(audio:sampleRate:options: Qwen3DecodingOptions) -> String` and `transcribeCheckingCancellation(audio:sampleRate:options:) throws -> String`; `Qwen3DecodingOptions()` has `maxTokens`, `language`, `context`. Cache `~/Library/Caches/qwen3-speech/` (override `QWEN3_CACHE_DIR`).
-**moonshine-swift / MoonshineVoice** — `Transcriber(modelPath: String, modelArch: ModelArch = .base, options: [TranscriberOption]? = nil, spellingModelPath: String? = nil) throws`; `createStream(updateInterval: TimeInterval = 0.5, flags: UInt32 = 0, transcribeFlags: UInt32 = 0) throws -> Stream`; `Stream.start()/stop()/close()`, `addAudio(_ audioData: [Float], sampleRate: Int32 = 16000) throws`, `addListener((TranscriptEvent) throws -> Void)`; events `LineStarted`, `LineUpdated`, `LineTextChanged`, `LineCompleted` (`line.text`, `startTime`, `duration`, `lineId`), `TranscriptError` (`error`); `Transcriber.setKeyterms([String]) throws` (no commas), `setContext(_:maxTerms:)`, `transcribeWithoutStreaming(audioData:sampleRate:flags:) throws -> Transcript`; `ModelArch`: `.tiny .base .tinyStreaming .baseStreaming .smallStreaming .mediumStreaming`; `AssetDownloader().ensureModelPresent(root: URL, spec: .stt(language:modelArch:includeSpelling:includeWordTimestamps:), onProgress:) async throws -> URL`.
+**Moonshine English Medium Streaming for BOTH live preview and final transcription.** Scott changed the original Qwen choice during this implementation session and supplied the official current-model list:
+https://moonshine-voice.readthedocs.io/en/latest/models/available-models/#current-models
 
-## Facts the plan relies on
-- Right-Option is a modifier: the hotkey tap watches `flagsChanged` and diffs `.maskAlternate`
-  against the physical keycode (61 right, 58 left) — `docs/borrowed/parakey-hotkey-listener.swift`.
-- Paste = pasteboard snapshot → write → ⌘V `CGEvent` → restore after ~150 ms; refuse when
-  `IsSecureEventInputEnabled()` — `docs/borrowed/parakey-text-insertion.swift`.
-- `AVAudioConverter` input block must return `.noDataNow`, never `.endOfStream` (spec §2.3).
-- Footprint target ≈ 2.5–3 GB with the 8-bit 1.7B Qwen3 weights; on this 36 GB machine that's fine.
-  If a 5-bit 1.7B variant appears in speech-swift's registry, prefer it (1.32 % WER, 1.9 GB).
+Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native model, serialized streaming/final access. Qwen/speech-swift/MLX have been removed. Do not reintroduce them from historical commits. Final output is completed after release, postprocessed, then inserted; live partials remain display-only. No unmeasured accuracy superiority is claimed.
 
-## Next steps (in order)
-1. Execute `docs/superpowers/plans/2026-09-29-said-implementation.md` (11 tasks, TDD, code included) task by task
-   (subagent-driven development recommended; TDD; branch per task; PR to `main`).
-2. Hardware/TCC verification is Scott's: `docs/SMOKE.md`. Report "needs smoke", never "done".
-3. First real-hardware milestone: Task "Dictation end-to-end" — hold ⌥ in Notes, see live words,
-   release, text pasted, clipboard restored.
+## Workspaces and integration
 
-## Gotchas
-- First `swift build` after a clean checkout recompiles MLX Metal shaders: several minutes.
-- SwiftPM builds a CLI; the menu-bar app + TCC identity need the xcodegen `.app` (plan task).
-- Ad-hoc-signed dev builds reset TCC grants: `tccutil reset ListenEvent org.tvw.said` etc.
-- GitHub shows `license=null` until its detector re-scans; `LICENSE` is plain MIT, third-party
-  attribution lives in `NOTICE`.
-- The Helper session that created this repo does not implement here; it hands off.
+- Public MIT repo: `github.com/scottf-tvw/sAId`.
+- Original checkout `/Volumes/Work/GitDev/sAId` remains on `main`.
+- **Active worktree:** `/Users/scottfreeman/.codex/worktrees/said-implementation/sAId`.
+- Current branch: `task/8-moonshine-final`, layered on reviewed Tasks 1–6 and the Moonshine amendment.
+- [PR #1](https://github.com/scottf-tvw/sAId/pull/1): baseline menu-bar entry/test target (original engine pin, superseded by the amendment).
+- [PR #2](https://github.com/scottf-tvw/sAId/pull/2): pure state machine and async engine protocols.
+- [PR #3](https://github.com/scottf-tvw/sAId/pull/3): Moonshine-only dependency/design amendment (review clean).
+- [PR #4](https://github.com/scottf-tvw/sAId/pull/4): protected transcript postprocessing; review clean.
+- [PR #5](https://github.com/scottf-tvw/sAId/pull/5): ordered audio capture; review clean.
+- [PR #6](https://github.com/scottf-tvw/sAId/pull/6): physical hotkey handling; review clean.
+- [PR #7](https://github.com/scottf-tvw/sAId/pull/7): clipboard-safe insertion and event-origin handling; review clean.
+- [PR #8](https://github.com/scottf-tvw/sAId/pull/8): resident Moonshine preview and verified cache; review clean.
+- Task 7 Moonshine adapter/cache/preview is complete at `8a01472`, review clean; all 127 strict tests pass with cached-model contracts enabled. Task 8 final transcription is complete at `f1b24cd`, review clean.
+- Task 6 insertion is complete and reviewed, commits `7d22f0e`, `96a4f9f`; parent independently verified all 108 tests with strict concurrency and warnings-as-errors.
+- Task 5 hotkey handling is complete and reviewed, commits `68af2af`, `04dc44d`; 17 hotkey checks and all 81 tests pass. Review fixed physical-state resynchronization at startup/reconfiguration/recovery.
+- Task 4 audio capture is complete and reviewed, commit `8be4fd7`; 12 audio checks and all 64 tests pass. Strict-concurrency build passes; no hardware accessed.
+- Task 3 (postprocessing) is complete and reviewed, commits `5205424`, `5b1c41a`; parent independently verified 52 strict-concurrency tests. Wrapped URL, filler punctuation, and normalized correction priority regressions are fixed.
+- Merge authorization was requested and remains pending. Continue implementing task branches; don't infer merge approval from the engine-choice discussion.
+- Recovery ledger: `.superpowers/sdd/2026-09-29-said-implementation/progress.md` in the active worktree. It contains task commits, reviews, fixes, and preflight rulings. Scratch reports/briefs/logs are ignored and must NOT be force-added to git.
+- Durable design corrections: `docs/IMPLEMENTATION-NOTES.md`.
+
+## Completed and verified
+
+1. Task 1: SwiftUI menu-bar placeholder replaces CLI main; module-import smoke test. Baseline review clean.
+2. Task 2: checked-Sendable state/reducer/protocols/logging. **41 reducer tests + 1 import test pass** with Swift 6 complete concurrency. Review found and fixed trailing-space loss and readiness recovery reopening capture during outstanding inference; scoped re-review clean. Core implementation commits `1706ef8`, `db96ed5`.
+3. Engine amendment: Package.swift now pins **moonshine-swift exactly 0.1.5**; Package.resolved contains that dependency only. Build/test passed with 42 tests. Amendment review passed; PR #3 is open.
+
+4. Task 3: deterministic corrections, fillers, protected tokens, casing and optional trailing space; atomic corrections JSON persistence. Intentional empty rules stay empty; corruption is surfaced without overwriting data. Review clean after one fix round. **52 tests pass** with strict concurrency.
+
+5. Task 4: non-main-actor audio capture, one-shot converter input, stereo downmix, exact resampler drain, ordered stream teardown, device/wake recovery on next press. Pure/synthetic checks pass and review is clean.
+
+6. Task 5: configurable physical hotkey handling, Escape cancellation, ordered main-actor callbacks, owned tap context, and safe recovery with physical-key resynchronization. **81 tests pass** with strict concurrency; review clean after one fix round.
+
+7. Task 6: clipboard-safe insertion and selectable Unicode fallback; restore on cancellation/failure, preserve newer clipboard contents, reject concurrent transactions, refuse secure input. Generated events bypass hotkey handling. Nil native clipboard reads fail before mutation. **108 tests pass**, review clean after one fix round.
+
+The controller and full application UI remain to be implemented. A compiled menu-bar placeholder is not an end-to-end app.
+
+8. Task 7: one resident actor-owned Moonshine model, fresh preview streams, aggregated line updates, explicit stop-time errors, validated atomic downloads and official mirror fallback. **127 tests pass**, including six offline native sessions; review clean.
+
+9. Task 8: final transcription on the same resident runtime, lifecycle/audio validation, cancellation boundaries and recovery after errors. **137 tests pass** with two opt-in skips; offline final suite separately passes all ten tests and six preview→final sessions. Review clean. Final compute time on the bundled clips was approximately 0.30–0.50 seconds; WER matches the preview results.
+
+## Current interfaces
+
+`DictationState` is a struct with independent model readiness, phase, HUD message, physical-held/queued intent, monotonic session IDs and timer IDs. See current `Core/` sources; the original enum-only plan sample was defective and has been replaced.
+
+- `PreviewTranscriber.start() async throws -> AsyncThrowingStream<PreviewLine, Error>` returns a fresh stream per utterance.
+- `feed(_:) async throws`, `stop() async`.
+- `FinalTranscriber.transcribe(_ pcm16k: [Float]) async throws -> String`.
+- Preview lines contain aggregated whole-utterance text.
+- `finalText` receives already-postprocessed final text, preserving trailing space. Blank detection uses a trimmed copy.
+- Effects/events carry session/timer identity. Controller must preserve IDs, drain ordered audio before finalizing, trim cap samples exactly, and display independent HUD messages.
+- Queued presses start after insertion completion only while still held; release/cancel withdraws them. The model-readiness state is not proof that in-flight inference has finished.
+
+Audio integration: `AudioCapture(inputDeviceUID:)` conforms to `CaptureSource`; each `start()` returns a fresh ordered `AsyncThrowingStream<[Float], Error>`. `stop()` quiesces production and finishes accepted chunks; the controller must wait for the consumer to drain. Configuration/wake/device loss ends the current stream with an error and next press creates a new backend. UID is fixed per capture instance; changing settings safely replaces the source.
+
+Insertion integration: `@MainActor TextInserter: TextSink` provides `insert(_:) async throws`; configure clipboard paste or direct Unicode. Completion means events posted and cleanup finished, not target acceptance. Calls reject overlap; controller owns queued presses. Record the final text in History on success or failure. `TextInsertionError.userMessage` provides secure-input or History-copy messaging.
+
+## Models and test fixtures
+
+- Eight Moonshine files are cached at `~/Library/Application Support/sAId/models/moonshine/`.
+- Catalog variant: `model/medium-streaming-en/quantized_26_08_21` from Moonshine 0.1.5's native catalog.
+- Primary CDN returned HTTP403. The exact files were downloaded from the official `moonshine-ai/moonshine-voice-assets` Hugging Face mirror; sizes and published SHA256 hashes were verified. Downloader must handle that fallback for users too.
+- All download processes have finished. The unused Qwen files downloaded during this run were removed; no pre-existing model cache was deleted.
+- Test fixtures are three LibriSpeech dev-clean recordings under CC BY 4.0, with attribution and source/WAV hashes. IDs: `1272-128104-0000`, `1272-128104-0005`, `1272-128104-0008`; durations 5.855, 9.01 and 5.12 seconds. Original FLAC is decoded to 16 kHz mono PCM16 without content edits. Six Swift preview sessions on one resident model passed. Recorded WER per clip: 0, 0.0556 and 0.1818; compute wall time in the final run ranged from 0.552 to 1.398 seconds per clip.
+- Earlier local-only synthetic probes verified native whole-utterance and streaming support. Their recordings will not be published; the public fixtures use clearly redistributable corpus audio instead. Three clips from one speaker test the pipeline, not accuracy on Scott's voice or broad speech quality.
+- Ordinary tests remain offline and avoid model downloads. Explicit `SAID_MODEL_TESTS=1` enables cached-model contract tests; absent/incomplete weights skip. Fast feeding prerecorded audio measures computation time, not live latency.
+
+## Build and runtime facts
+
+- Swift 6.3.3 / Xcode 26.6; current baseline builds without warnings.
+- Each worktree needs its own `.build`. Symlinking the original cache produced duplicate absolute module paths and compiler crashes; a clean independent build passed.
+- xcodegen is installed. Developer ID identity exists for **Scott DL Freeman, team M2TEAF948X**; verify it when configuring packaging.
+- SPM alone does not produce the final .app bundle/TCC identity. Task10 creates the Xcodegen project and signed app.
+- Resources use Bundle.main. No app print(), no unchecked Sendable outside native engine adapters, no transcription in tap, converter input never reports endOfStream for temporary absence.
+- Borrowed Parakey code requires its MIT notice. Its old clipboard policy is not ours: preserve/restore clipboard with newer-user-change protection.
+
+## Next work
+
+Continue Tasks 9–11 in order; both Moonshine roles are implemented and reviewed. The Moonshine amendment is complete and remaining task briefs have been regenerated. The old sample code has been replaced by corrected contracts and test requirements; follow the amended spec and actual implemented interfaces.
+
+Human assistance is expected once a signed full app is ready: grant Microphone/Input Monitoring/Accessibility and run `docs/SMOKE.md` in Notes and the other target apps. Real paste delivery, clipboard restoration, secure-input refusal, device changes, sleep/wake, and memory soak are **needs smoke**. Nothing has been marked passed without Scott's verification.
+
+Scott uses the Mac through Splashtop. **Never lock the screen or invoke a Computer Use lock workflow.** No microphone capture, permission grants, synthetic desktop events, or screen automation have been performed in this implementation run.
