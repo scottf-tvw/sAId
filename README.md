@@ -6,11 +6,11 @@ floating pill shows live words while you hold the key so you always know it's li
 
 Everything runs on-device:
 
-- **Final text:** Qwen3-ASR 1.7B (via [speech-swift](https://github.com/soniqo/speech-swift)) —
-  the most accurate local English model we measured.
-- **Live preview:** Moonshine mediumStreaming (via [moonshine-swift](https://github.com/moonshine-ai/moonshine-swift)).
+- **Final text and live preview:** Moonshine mediumStreaming (via
+  [moonshine-swift](https://github.com/moonshine-ai/moonshine-swift)). One resident model serves both
+  roles; the preview is shown in the HUD and only the final transcription is pasted.
 
-Requirements: macOS 15 or later, Apple Silicon, ~2.5 GB of RAM for the two resident models.
+Requirements: macOS 15 or later, Apple Silicon.
 
 ## Status
 Skeleton. The design is in `docs/superpowers/specs/2026-09-29-said-dictation-design.md`; the
@@ -18,7 +18,7 @@ implementation plan is in `docs/superpowers/plans/`. See `docs/HANDOFF.md` for t
 
 ## Build
 ```bash
-swift build && swift test          # engines link, unit tests
+swift build && swift test -Xswiftc -strict-concurrency=complete
 xcodegen generate && xcodebuild -project sAId.xcodeproj -scheme sAId -configuration Debug build
 ```
 
