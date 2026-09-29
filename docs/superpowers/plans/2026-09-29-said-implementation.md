@@ -61,7 +61,7 @@ The reducer's actual API is in `Sources/sAId/Core/`. It uses a `DictationState` 
 
 - [x] Replace CLI placeholder with SwiftUI menu-bar entry and testable import.
 - [x] Build and module-import smoke test; reviewed PR #1.
-- [ ] Apply Scott's amendment: remove speech-swift/Qwen and all transitive dependencies, pin Moonshine exactly 0.1.5, update dependency documentation. Run `swift package resolve`, `swift package show-dependencies`, `swift build`, `swift test -Xswiftc -strict-concurrency=complete`; review and PR.
+- [x] Apply Scott's amendment: remove speech-swift/Qwen and all transitive dependencies, pin Moonshine exactly 0.1.5, update dependency documentation. Run `swift package resolve`, `swift package show-dependencies`, `swift build`, `swift test -Xswiftc -strict-concurrency=complete`; review and PR.
 
 ### Task 2: Pure reducer and actor-compatible protocols — complete
 
@@ -158,12 +158,12 @@ Also cover whole-word Unicode boundaries, multiword longest-first corrections, l
 
 **Interfaces:** controller actor owns one existing `DictationState` for its lifetime; consumes actual reducer effects, CaptureSource, preview/final protocols (same engine object), TextSink, Sendable PostProcess and history callback carrying text/target identity. Expose currentState, state snapshots, ordered hotkey entry, model readiness, configure/enable, and shutdown. Main-actor HUD observes state.phase plus independent state.message.
 
-- [ ] Tests before code using deterministic barriers: ordered final-chunk drain on release; cap trims to exactly 1,920,000 samples; short taps use audio duration; capture startup/midstream failure; preview failure preserves final; repeated sessions; stale completions/timers; queued held press starts only after insertion/clipboard restore; release/cancel withdraws queue; final-vs-preview history source; empty postprocessed output; disable/shutdown; readiness failure/recovery.
-- [ ] Run failing controller tests. Never use unchecked fake mutable state or fixed sleeps as synchronization.
-- [ ] Execute effects in order, retaining task handles and session IDs. Release stops audio production and drains buffered accepted chunks before sending release/final work. Avoid deadlock if cap triggers from inside the audio-consumer task. Preview work must not delay audio acceptance or lose final audio. Late callbacks cannot reuse a newer session's target app identity.
-- [ ] Postprocess final text once before `.finalText`. Record only through the reducer's history effects, avoiding duplicate success entries. Propagate insertion/capture failures with truthful UI messages.
-- [ ] HUD: nonactivating floating NSPanel, no focus/mouse capture; bottom-center of screen under pointer; trailing ~12 words, listening pulse, finalizing spinner, completed/error/nothing-heard/loading states, 600 ms shown and 2 s errors. Ignore a stale hide timer. Unit-test presentation mapping without opening a window.
-- [ ] Build/test and commit; actual HUD behavior needs Scott's smoke test.
+- [x] Tests before code using deterministic barriers: ordered final-chunk drain on release; cap trims to exactly 1,920,000 samples; short taps use audio duration; capture startup/midstream failure; preview failure preserves final; repeated sessions; stale completions/timers; queued held press starts only after insertion/clipboard restore; release/cancel withdraws queue; final-vs-preview history source; empty postprocessed output; disable/shutdown; readiness failure/recovery.
+- [x] Run failing controller tests. Never use unchecked fake mutable state or fixed sleeps as synchronization.
+- [x] Execute effects in order, retaining task handles and session IDs. Release stops audio production and drains buffered accepted chunks before sending release/final work. Avoid deadlock if cap triggers from inside the audio-consumer task. Preview work must not delay audio acceptance or lose final audio. Late callbacks cannot reuse a newer session's target app identity.
+- [x] Postprocess final text once before `.finalText`. Record only through the reducer's history effects, avoiding duplicate success entries. Propagate insertion/capture failures with truthful UI messages.
+- [x] HUD: nonactivating floating NSPanel, no focus/mouse capture; bottom-center of screen under pointer; 44 pt dark translucent primary pill, trailing ~12 words, pulsing mic glyph, finalizing spinner, red error text, completed/nothing-heard/loading states, 600 ms shown and 2 s errors. Independent notices may occupy a compact separate capsule while the primary capture state stays visible. Ignore a stale hide timer. Unit-test presentation mapping without opening a window.
+- [x] Build/test and commit; actual HUD behavior needs Scott's smoke test.
 
 ### Task 10: Full app shell and signed .app
 
