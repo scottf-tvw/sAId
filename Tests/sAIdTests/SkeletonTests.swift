@@ -1,5 +1,6 @@
 import XCTest
+@testable import sAId
 
 final class SkeletonTests: XCTestCase {
-    func testSkeletonBuilds() { XCTAssertTrue(true) }
+    func testModuleImports() { XCTAssertTrue(true) }
 }
