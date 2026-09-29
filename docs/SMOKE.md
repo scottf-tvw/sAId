@@ -23,7 +23,7 @@ After each row, paste (⌘V) somewhere harmless and confirm the sentinel is back
 | 6 | Notes | same | text at the caret |
 | 7 | Password field (Safari login or System Settings) | hold ⌥, speak | **refused**: HUD says "Secure input field"; nothing pasted; transcript in History |
 | 8 | Tap, don't hold (< 250 ms) | tap ⌥ | nothing happens; no HUD flash beyond a blink |
-| 9 | Cancel | hold ⌥, speak, press Esc, release | nothing pasted; HUD hides |
+| 9 | Cancel | test Esc while holding and again after release while finalization is pending; also test idle Esc | pending text is not pasted; HUD hides; idle Esc reaches the target (already-posted events cannot be retracted) |
 | 10 | Long utterance | hold ⌥ for ~30 s of speech | live preview keeps up; final text correct; no truncation |
 | 11 | Cap | hold ⌥ for > 120 s | HUD warns at the cap and finalizes on its own |
 | 12 | Live preview | hold ⌥, speak slowly | words appear in the HUD within ~0.5 s of being spoken |

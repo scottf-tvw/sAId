@@ -50,7 +50,7 @@ struct HotkeyDecider: Sendable {
         suppressEscapeKeyUp = false
     }
 
-    mutating func transition(_ event: HotkeyEventSnapshot) -> HotkeyDecision {
+    mutating func transition(_ event: HotkeyEventSnapshot, canCancel: Bool? = nil) -> HotkeyDecision {
         // Our insertion keycodes can equal the user's hotkey. Do not consume them or alter held state.
         guard event.sourceUserData != EventOrigin.insertion else {
             return HotkeyDecision(action: .none, suppress: false)
@@ -58,7 +58,7 @@ struct HotkeyDecider: Sendable {
         if event.keycode == 53 {
             if event.typeRawValue == CGEventType.keyDown.rawValue {
                 if suppressEscapeKeyUp { return HotkeyDecision(action: .none, suppress: true) }
-                guard active else { return HotkeyDecision(action: .none, suppress: false) }
+                guard canCancel ?? active else { return HotkeyDecision(action: .none, suppress: false) }
                 suppressEscapeKeyUp = true
                 guard !event.isAutoRepeat else { return HotkeyDecision(action: .none, suppress: true) }
                 active = false

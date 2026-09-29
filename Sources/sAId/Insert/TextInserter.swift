@@ -18,6 +18,19 @@ enum TextInsertionError: Error, Equatable {
     case snapshotFailed, clipboardWriteFailed, clipboardChanged, clipboardRestoreFailed
     case insertionInProgress
 
+    /// Explicit allowlist: never serialize arbitrary Error descriptions or clipboard content.
+    var diagnosticCategory: String {
+        switch self {
+        case .secureInput: "secureInput"
+        case .permissionUnavailable: "permissionUnavailable"
+        case .eventCreationFailed: "eventCreationFailed"
+        case .snapshotFailed: "snapshotFailed"
+        case .clipboardWriteFailed: "clipboardWriteFailed"
+        case .clipboardChanged: "clipboardChanged"
+        case .clipboardRestoreFailed: "clipboardRestoreFailed"
+        case .insertionInProgress: "insertionInProgress"
+        }
+    }
     var userMessage: String {
         self == .secureInput ? "Secure input field" : "Paste failed — copy from History"
     }

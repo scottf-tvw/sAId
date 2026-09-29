@@ -26,7 +26,7 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - [PR #9](https://github.com/scottf-tvw/sAId/pull/9): final transcription on the same resident model; review clean.
 - [PR #10](https://github.com/scottf-tvw/sAId/pull/10): ordered controller and nonactivating HUD; review clean.
 - [PR #11](https://github.com/scottf-tvw/sAId/pull/11): full app shell, settings, History, permission recovery and signed bundle; review clean.
-- PRs #1–11 remain open and unmerged pending approval. Task 11 is complete at `42419f9`/`1cbf097`; its task review and scoped re-review approved. Its PR and the final whole-branch review remain pending.
+- PRs #1–11 remain open and unmerged pending approval. Task 11 is complete at `42419f9`/`1cbf097`; its task review and scoped re-review approved. Its PR remains pending. The final whole-branch review found three scoped fixes; the consolidated fix wave is implemented and awaiting scoped re-review.
 - Task 10 app shell/signed bundle is complete at `c35013e`/`a149c35`, base `75185b8`; independent review approved, menu-error fix re-review clean.
 - Task 9 controller/HUD is complete at `f1c3b3d`, review clean; 164 strict tests pass with two expected opt-in skips.
 - Task 7 Moonshine adapter/cache/preview is complete at `8a01472`, review clean; all 127 strict tests pass with cached-model contracts enabled. Task 8 final transcription is complete at `f1b24cd`, review clean.
@@ -52,7 +52,7 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 
 7. Task 6: clipboard-safe insertion and selectable Unicode fallback; restore on cancellation/failure, preserve newer clipboard contents, reject concurrent transactions, refuse secure input. Generated events bypass hotkey handling. Nil native clipboard reads fail before mutation. **108 tests pass**, review clean after one fix round.
 
-The full app shell, settings, persistent History, permission UI and signed Debug bundle are implemented in Task 10. Task 11 packaging and temporary-destination installation are now verified; final independent review, actual /Applications installation and hardware acceptance remain.
+The full app shell, settings, persistent History, permission UI and signed Debug bundle are implemented in Task 10. Task 11 packaging and temporary-destination installation are now verified; scoped final re-review, actual /Applications installation and hardware acceptance remain.
 
 8. Task 7: one resident actor-owned Moonshine model, fresh preview streams, aggregated line updates, explicit stop-time errors, validated atomic downloads and official mirror fallback. **127 tests pass**, including six offline native sessions; review clean.
 
@@ -84,6 +84,15 @@ Benchmark: `./scripts/bench.sh --preview Tests/Fixtures Tests/Fixtures/transcrip
 | Corpus (19.985 s audio) | 3 / 46 | **0.065217** | **3.390080** | **1.202811** |
 
 The hardened signed copy produced identical edit/reference counts and hypotheses; load/verify 0.6279 seconds, preview total 3.457341 seconds, final total 1.227656 seconds. Three LibriSpeech clips from one speaker are pipeline evidence, not Scott's jargon accuracy. README describes his optional 20-sentence corpus. Empty-reference insertion errors stay in corpus totals; per-file WER is undefined when an empty reference has nonempty output.
+
+## Final review fix wave (2026-09-29)
+
+- Physical Escape now reaches the ordered controller path after key release during finalization/insertion. The listener reads controller-owned cancellation eligibility synchronously, including pending physical presses, so delayed HUD observation or blocked cleanup cannot erase the intent. Idle Escape passes through; generated insertion events bypass processing; Escape during a queued hold still withdraws only that hold.
+- At the exact 1,920,000-sample cap, an independent two-second HUD notice warns that capture ended while frozen preview/finalization continues. Existing timer/session identities reject stale expiry. The primary HUD pill remains 44 pt and only final text reaches insertion.
+- Capture start/stream and insertion failures now log once at the owned worker boundary, using allowlisted categories or known Core Audio numeric status. These diagnostics exclude arbitrary error descriptions, transcript/correction contents and clipboard bytes; History and cleanup behavior remain intact.
+- Fresh strict `make test`: **176 XCTest cases, two expected opt-in native skips, zero failures; 12 Swift Testing cases, zero failures; 15 Python packaging/helper cases, zero failures**. Seven new regressions include physical listener → production bridge → controller cancellation with gated final inference, pending presses behind cleanup, queued cancellation, cap expiry/stale timers and safe diagnostics. A deliberate pending-state mutation failed four assertions, then passed after restoration.
+- Fresh signed Debug and Release builds pass identity/team/designated-requirement, arm64, hardened-runtime, exact audio-input entitlement and bundled resource-byte checks. The only build warning is the already documented AppIntents metadata-extraction skip. No unchanged native inference/benchmark rerun was needed; shared Moonshine ownership and model code are unchanged.
+- Evidence: `.superpowers/sdd/2026-09-29-said-implementation/final-fix-report.md` and `final-fix-*.log` (ignored). Scoped re-review and actual installation remain parent-owned. The nonblocking permission-poll lifecycle coverage stays deferred; all 30 human smoke rows and actual notarization remain pending.
 
 ## Current interfaces
 
@@ -124,7 +133,7 @@ Controller integration: `send(action,target:)` is synchronous/nonisolated and be
 
 ## Next work
 
-Parent: complete the independent whole-branch review, address load-bearing findings, create the remaining PR, then install the reviewed signed app in `/Applications/sAId.app`. Task 11 has passed task review after both installer/release destination races were fixed and re-reviewed. Merge approval is still pending. Do not launch it or perform desktop automation on Scott's behalf.
+Parent: complete scoped re-review of the consolidated final fixes, create the remaining PR, then install the reviewed signed app in `/Applications/sAId.app`. Task 11 has passed task review after both installer/release destination races were fixed and re-reviewed. Merge approval is still pending. Do not launch it or perform desktop automation on Scott's behalf.
 
 First human milestone: Scott launches the app, grants Microphone/Input Monitoring/Accessibility through its checklist, waits for Models ready, copies a distinctive clipboard sentinel and dictates in **Notes** with Right Option. He should observe live words, one final insertion on release, then verify that pasting elsewhere restores the original sentinel. Record his report in `docs/SMOKE.md`; all 30 manual matrix rows remain **needs smoke**, including real paste delivery, secure-input refusal, focus, device changes, sleep/wake, and eight-hour memory residency.
 

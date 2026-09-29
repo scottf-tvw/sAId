@@ -15,6 +15,8 @@ protocol HotkeyTap: AnyObject {
 final class HotkeyListener {
     /// Called synchronously in tap order. Keep work here brief to avoid tap timeouts.
     var onAction: (@MainActor (HotkeyAction) -> Void)?
+    /// Controller-owned eligibility includes pending physical actions, not delayed HUD state.
+    var canCancel: (@MainActor () -> Bool)?
     private let tap: any HotkeyTap
     private var decider: HotkeyDecider
     private var running = false
@@ -64,7 +66,7 @@ final class HotkeyListener {
             if wasActive { onAction?(.cancel) }
             return false
         }
-        let decision = decider.transition(snapshot)
+        let decision = decider.transition(snapshot, canCancel: canCancel?())
         if decision.action != .none { onAction?(decision.action) }
         return decision.suppress
     }

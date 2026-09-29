@@ -133,7 +133,7 @@ final class DictationReducerTests: XCTestCase {
 
     func testCapBoundaryAutomaticallyFinalizesOnce() {
         var state = listening(seconds: 119.99)
-        XCTAssertEqual(send(&state, .audio(session: first, seconds: 0.01)), [.stopCapture(session: first), .stopPreview(session: first), .log("cap reached"), .runFinal(session: first)])
+        XCTAssertEqual(send(&state, .audio(session: first, seconds: 0.01)), [.stopCapture(session: first), .stopPreview(session: first), .scheduleErrorClear(timer: timer, after: 2), .log("cap reached"), .runFinal(session: first)])
         XCTAssertEqual(state.phase, .finalizing(session: first, preview: "preview"))
         XCTAssertEqual(send(&state, .audio(session: first, seconds: 1)), [])
         XCTAssertEqual(send(&state, .hotkeyDown), [])
@@ -381,7 +381,7 @@ final class DictationReducerTests: XCTestCase {
         var state = listening(seconds: 119)
         send(&state, .audio(session: first, seconds: 1))
         send(&state, .finalText(session: first, text: "Final output."))
-        XCTAssertEqual(send(&state, .inserted(session: first)), [.record("Final output."), .scheduleHide(timer: timer, after: 0.6)])
+        XCTAssertEqual(send(&state, .inserted(session: first)), [.record("Final output."), .scheduleHide(timer: .init(rawValue: 2), after: 0.6)])
         XCTAssertEqual(send(&state, .hotkeyDown), [])
         send(&state, .hotkeyUp)
         XCTAssertEqual(send(&state, .hotkeyDown), [.startCapture(session: second), .startPreview(session: second)])

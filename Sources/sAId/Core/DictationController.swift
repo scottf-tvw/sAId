@@ -1,5 +1,6 @@
 import SaidEngine
 import Foundation
+import Synchronization
 
 /// Owns one reducer lifetime. All external commands and asynchronous completions pass
 /// through one mailbox; reentrancy while awaiting cleanup cannot reorder physical actions.
@@ -35,6 +36,16 @@ actor DictationController {
         var reportedSamples = 0
         var reportedPreviewFailure = false
     }
+    // Read in the synchronous event callback, independently of the UI observer.
+    // Pending presses cover hold/release/Escape arriving before the mailbox catches up.
+    private struct CancellationEligibility {
+        var pendingPresses = 0
+        var hasSession = false
+    }
+    private nonisolated let cancellationEligibility = Mutex(CancellationEligibility())
+    nonisolated var canCancel: Bool {
+        cancellationEligibility.withLock { $0.hasSession || $0.pendingPresses > 0 }
+    }
     private let requests: AsyncStream<Request>
     private nonisolated let input: AsyncStream<Request>.Continuation
     private var worker: Task<Void, Never>?
@@ -57,7 +68,7 @@ actor DictationController {
     init(capture: any CaptureSource, preview: any PreviewTranscriber, final: any FinalTranscriber,
          sink: any TextSink, postProcess: PostProcess = PostProcess(),
          record: @escaping @Sendable (DictationHistoryEntry) async -> Void = { _ in },
-         log: @escaping @Sendable (String) async -> Void = { Log.app.info("\($0, privacy: .public)") },
+         log: @escaping @Sendable (String) async -> Void = { Log.controller($0) },
          delay: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
         self.capture = capture; self.preview = preview; self.final = final; self.sink = sink
         self.postProcess = postProcess; self.record = record; self.log = log; self.delay = delay
@@ -94,13 +105,23 @@ actor DictationController {
     }
     private func removeObserver(_ id: UUID) { observers[id] = nil }
     private func publish() { for observer in observers.values { observer.yield(currentState) } }
+    private nonisolated func submit(_ request: Request) -> Bool {
+        let isPress: Bool
+        if case .hotkey(.pressed, _) = request.command { isPress = true } else { isPress = false }
+        if isPress { cancellationEligibility.withLock { $0.pendingPresses += 1 } }
+        if case .terminated = input.yield(request) {
+            if isPress { cancellationEligibility.withLock { $0.pendingPresses -= 1 } }
+            return false
+        }
+        return true
+    }
     private nonisolated func enqueue(_ command: Command) {
-        input.yield(Request(command: command))
+        guard submit(Request(command: command)) else { return }
         Task { await startWorker() }
     }
     private nonisolated func request(_ command: Command) async {
         await withCheckedContinuation { completion in
-            if case .terminated = input.yield(Request(command: command, completion: completion)) { completion.resume() }
+            if !submit(Request(command: command, completion: completion)) { completion.resume() }
             else { Task { await startWorker() } }
         }
     }
@@ -111,6 +132,9 @@ actor DictationController {
     private func run() async {
         for await request in requests {
             if !closed { await process(request.command) }
+            if case .hotkey(.pressed, _) = request.command {
+                cancellationEligibility.withLock { $0.pendingPresses -= 1 }
+            }
             request.completion?.resume()
         }
         worker = nil
@@ -174,7 +198,9 @@ actor DictationController {
         // Capture the originating context before reducer effects can start a queued session.
         let context = session
         let (state, effects) = DictationReducer.reduce(currentState, event)
-        currentState = state; publish()
+        currentState = state
+        cancellationEligibility.withLock { $0.hasSession = state.session != nil }
+        publish()
         for effect in effects { await execute(effect, event: event, context: context) }
     }
     private func execute(_ effect: DictationEffect, event: DictationEvent, context: Session?) async {
@@ -213,13 +239,21 @@ actor DictationController {
                           postProcess: postProcess, sink: sink, buffer: buffer)
         let starting = Task { try await source.start() }
         session?.starting = starting
+        let log = log
         session?.capture = Task { [weak self] in
+            var operation = "capture start"
             do {
                 let stream = try await starting.value
+                operation = "capture stream"
                 for try await chunk in stream {
                     if await buffer.append(chunk) { self?.enqueue(.progress(id)) }
                 }
-            } catch { await buffer.captureFailed("Microphone capture failed") }
+            } catch {
+                if !(error is CancellationError && Task.isCancelled) {
+                    await log("\(operation): \(Self.captureFailureCategory(error))")
+                }
+                await buffer.captureFailed("Microphone capture failed")
+            }
             self?.enqueue(.progress(id))
         }
     }
@@ -307,16 +341,29 @@ actor DictationController {
     }
     private func insert(_ id: DictationSessionID, text: String) {
         guard let context = session, context.id == id else { return }
-        let sink = context.sink
+        let sink = context.sink, log = log
         session?.operation = Task { [weak self] in
             do {
                 try await sink.insert(text); try Task.checkCancellation()
                 self?.enqueue(.event(.inserted(session: id)))
             } catch is CancellationError { }
             catch {
+                await log("insert: \((error as? TextInsertionError)?.diagnosticCategory ?? "unknown")")
                 let message = (error as? TextInsertionError)?.userMessage ?? "Paste failed — copy from History"
                 self?.enqueue(.event(.insertFailed(session: id, reason: message)))
             }
+        }
+    }
+    private static func captureFailureCategory(_ error: any Error) -> String {
+        guard let error = error as? AudioCaptureError else { return "unknown" }
+        switch error {
+        case .alreadyRunning: return "alreadyRunning"
+        case .deviceUnavailable: return "deviceUnavailable"
+        case .configurationChanged: return "configurationChanged"
+        case .systemWoke: return "systemWoke"
+        case .invalidFormat: return "invalidFormat"
+        case .conversionFailed: return "conversionFailed"
+        case .coreAudio(let status): return "coreAudio(\(status))"
         }
     }
     private func cancelTasks() {

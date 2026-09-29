@@ -43,6 +43,10 @@ final class AppViewModel: ObservableObject {
         hud = HUDPanel()
         controller = Self.makeController(engine: engine, inserter: inserter, settings: settings, history: history)
         settings.onChange = { [weak self] in self?.applySettings() }
+        hotkey.canCancel = { [weak self] in
+            guard let self, !self.closed, !self.reconfiguringHotkey, self.acceptingHotkeys else { return false }
+            return self.controller.canCancel
+        }
         hotkey.onAction = { [weak self] action in
             guard let self, !self.closed, !self.reconfiguringHotkey else { return }
             self.recheckPermissions()

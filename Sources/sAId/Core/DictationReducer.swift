@@ -113,6 +113,7 @@ struct DictationReducer: Sendable {
             if total >= capSeconds {
                 stopListening(&state, session: session, effects: &effects)
                 state.phase = .finalizing(session: session, preview: preview)
+                showError(&state, message: "120-second limit reached — finishing", preservingPhase: true, effects: &effects)
                 effects += [.log("cap reached"), .runFinal(session: session)]
             } else {
                 state.phase = .listening(session: session, preview: preview, seconds: total)
