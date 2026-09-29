@@ -6,7 +6,7 @@ actor DictationController {
     private enum Command: Sendable {
         case hotkey(HotkeyAction, String?)
         case readiness(ModelReadiness)
-        case configure((any CaptureSource)?, PostProcess?)
+        case configure((any CaptureSource)?, (any TextSink)?, PostProcess?)
         case enabled(Bool, String?)
         case progress(DictationSessionID)
         case preview(DictationSessionID)
@@ -23,6 +23,7 @@ actor DictationController {
         let timestamp: Date
         let source: any CaptureSource
         let postProcess: PostProcess
+        let sink: any TextSink
         let buffer: DictationSessionBuffer
         var starting: Task<AsyncThrowingStream<[Float], Error>, Error>?
         var capture: Task<Void, Never>?
@@ -40,7 +41,7 @@ actor DictationController {
     private var capture: any CaptureSource
     private let preview: any PreviewTranscriber
     private let final: any FinalTranscriber
-    private let sink: any TextSink
+    private var sink: any TextSink
     private var postProcess: PostProcess
     private let record: @Sendable (DictationHistoryEntry) async -> Void
     private let log: @Sendable (String) async -> Void
@@ -68,8 +69,12 @@ actor DictationController {
     nonisolated func send(_ action: HotkeyAction, target: String? = nil) { enqueue(.hotkey(action, target)) }
     nonisolated func handle(_ action: HotkeyAction, target: String? = nil) async { await request(.hotkey(action, target)) }
     nonisolated func setModelReadiness(_ value: ModelReadiness) async { await request(.readiness(value)) }
-    nonisolated func configure(capture: (any CaptureSource)? = nil, postProcess: PostProcess? = nil) async {
-        await request(.configure(capture, postProcess))
+    nonisolated func configure(capture: (any CaptureSource)? = nil, sink: (any TextSink)? = nil, postProcess: PostProcess? = nil) async {
+        await request(.configure(capture, sink, postProcess))
+    }
+    /// Enqueue UI settings before a subsequent physical press can overtake them.
+    nonisolated func sendConfiguration(capture: (any CaptureSource)? = nil, sink: (any TextSink)? = nil, postProcess: PostProcess? = nil) {
+        enqueue(.configure(capture, sink, postProcess))
     }
     nonisolated func setEnabled(_ value: Bool, reason: String? = nil) async { await request(.enabled(value, reason)) }
     /// Returns only after inference, capture, preview and insertion/clipboard cleanup.
@@ -133,11 +138,12 @@ actor DictationController {
             case .failed(let reason): await apply(.modelsFailed(reason))
             case .loading: await apply(.modelsLoading)
             }
-        case .configure(let source, let processing):
+        case .configure(let source, let replacementSink, let processing):
             if let source {
                 if case .listening = currentState.phase { cancelTasks(); await apply(.cancel); await cancelOwnedWork() }
                 capture = source
             }
+            if let replacementSink { sink = replacementSink }
             if let processing { postProcess = processing }
         case .enabled(let value, let reason):
             enabled = value
@@ -203,7 +209,7 @@ actor DictationController {
     private func startCapture(_ id: DictationSessionID) async {
         let source = capture, buffer = DictationSessionBuffer()
         session = Session(id: id, target: pendingTarget, timestamp: Date(), source: source,
-                          postProcess: postProcess, buffer: buffer)
+                          postProcess: postProcess, sink: sink, buffer: buffer)
         let starting = Task { try await source.start() }
         session?.starting = starting
         session?.capture = Task { [weak self] in
@@ -299,8 +305,8 @@ actor DictationController {
         }
     }
     private func insert(_ id: DictationSessionID, text: String) {
-        guard session?.id == id else { return }
-        let sink = sink
+        guard let context = session, context.id == id else { return }
+        let sink = context.sink
         session?.operation = Task { [weak self] in
             do {
                 try await sink.insert(text); try Task.checkCancellation()

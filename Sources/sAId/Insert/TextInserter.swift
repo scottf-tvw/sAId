@@ -9,7 +9,7 @@ protocol TextSink: Sendable {
     func insert(_ text: String) async throws
 }
 
-enum TextInsertionStrategy: String, Sendable, CaseIterable {
+enum TextInsertionStrategy: String, Sendable, CaseIterable, Codable {
     case clipboardPaste, directUnicode
 }
 

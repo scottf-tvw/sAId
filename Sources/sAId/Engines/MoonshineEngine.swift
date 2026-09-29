@@ -63,6 +63,17 @@ actor MoonshineEngine: PreviewTranscriber, FinalTranscriber {
         progress?(1, "Ready")
     }
 
+    /// Only for user-confirmed reset or quit, after the controller is quiescent
+    /// and the load task has finished. Actor isolation waits for synchronous inference.
+    /// Explicitly drop native ownership even if an old controller still retains this actor.
+    func releaseForExplicitReset() throws {
+        guard !loading else { throw MoonshineEngineError.loading }
+        guard nativeStream == nil else { throw MoonshineEngineError.alreadyStreaming }
+        continuation?.finish(); continuation = nil
+        runtime = nil
+        order.removeAll(); lines.removeAll()
+    }
+
     func setKeyterms(_ terms: [String]) throws {
         var seen = Set<String>()
         let cleaned = terms.compactMap { raw -> String? in
