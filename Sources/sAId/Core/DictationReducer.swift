@@ -23,16 +23,15 @@ struct DictationReducer: Sendable {
             state.readiness = .failed(reason)
             state.queuedStart = false
             effects.append(.log("models: \(reason)"))
-            // A paste already in progress must be allowed to finish and record its final text.
-            if case .inserting = state.phase {
+            // Readiness changes do not complete outstanding inference or insertion.
+            // Preserve ownership until its matching callback, preventing overlapping capture.
+            switch state.phase {
+            case .finalizing, .inserting:
                 state.message = .error("Models failed: \(reason)")
-            } else {
+                state.activeTimer = nil
+            default:
                 if case .listening(let session, _, _) = state.phase {
                     stopListening(&state, session: session, effects: &effects)
-                }
-                if case .finalizing(_, let preview) = state.phase,
-                   !preview.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    effects.append(.record(preview))
                 }
                 state.phase = .error("Models failed: \(reason)")
                 state.message = .error("Models failed: \(reason)")
@@ -49,9 +48,7 @@ struct DictationReducer: Sendable {
                 case .failed(let reason): message = "Models failed: \(reason)"
                 case .ready: message = "Model not ready"
                 }
-                let isInserting: Bool
-                if case .inserting = state.phase { isInserting = true } else { isInserting = false }
-                showError(&state, message: message, preservingPhase: isInserting, effects: &effects)
+                showError(&state, message: message, preservingPhase: state.session != nil, effects: &effects)
                 return (state, effects)
             }
             switch state.phase {
@@ -106,16 +103,24 @@ struct DictationReducer: Sendable {
             state.phase = .listening(session: session, preview: line.text, seconds: seconds)
 
         case .finalText(let session, let text):
-            guard case .finalizing(let current, _) = state.phase, current == session else { return (previous, []) }
-            let final = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if final.isEmpty {
+            guard case .finalizing(let current, let preview) = state.phase, current == session else { return (previous, []) }
+            guard state.readiness == .ready else {
+                state.queuedStart = false
+                if !preview.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { effects.append(.record(preview)) }
+                let message: String
+                if case .failed(let reason) = state.readiness { message = "Models failed: \(reason)" }
+                else { message = "Models still loading" }
+                showError(&state, message: message, effects: &effects)
+                return (state, effects)
+            }
+            if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 state.queuedStart = false
                 state.phase = .nothingHeard
                 state.message = .nothingHeard
                 effects.append(.scheduleHide(timer: newTimer(&state), after: errorSeconds))
             } else {
-                state.phase = .inserting(session: session, final: final)
-                effects.append(.insert(session: session, text: final))
+                state.phase = .inserting(session: session, final: text)
+                effects.append(.insert(session: session, text: text))
             }
 
         case .inserted(let session):

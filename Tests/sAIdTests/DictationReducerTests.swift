@@ -156,7 +156,7 @@ final class DictationReducerTests: XCTestCase {
 
     func testFinalTextEntersInsertingWithActualFinalAndNeverPreview() {
         var state = finalizing()
-        XCTAssertEqual(send(&state, .finalText(session: first, text: "  Final output.\n")), [.insert(session: first, text: "Final output.")])
+        XCTAssertEqual(send(&state, .finalText(session: first, text: "Final output.")), [.insert(session: first, text: "Final output.")])
         XCTAssertEqual(state.phase, .inserting(session: first, final: "Final output."))
         XCTAssertEqual(send(&state, .finalText(session: first, text: "duplicate")), [])
     }
@@ -357,12 +357,12 @@ final class DictationReducerTests: XCTestCase {
         XCTAssertEqual(state.phase, .error("Models failed: unavailable"))
     }
 
-    func testReadinessLossDuringFinalizingRetainsPreviewAndRejectsLateFinal() {
+    func testReadinessLossDuringFinalizingRetainsOwnershipUntilCompletion() {
         var state = finalizing()
-        XCTAssertEqual(send(&state, .modelsFailed("unavailable")), [.log("models: unavailable"), .record("preview")])
-        let before = state
-        XCTAssertEqual(send(&state, .finalText(session: first, text: "too late")), [])
-        XCTAssertEqual(state, before)
+        XCTAssertEqual(send(&state, .modelsFailed("unavailable")), [.log("models: unavailable")])
+        XCTAssertEqual(state.phase, .finalizing(session: first, preview: "preview"))
+        XCTAssertEqual(send(&state, .finalText(session: first, text: "completed while unavailable")), [.record("preview"), .scheduleErrorClear(timer: timer, after: 2)])
+        XCTAssertEqual(state.phase, .error("Models failed: unavailable"))
     }
 
     func testReadinessLossStopsListeningAndDoesNotStartQueuedCapture() {
@@ -380,6 +380,51 @@ final class DictationReducerTests: XCTestCase {
         send(&state, .audio(session: first, seconds: 1))
         send(&state, .finalText(session: first, text: "Final output."))
         XCTAssertEqual(send(&state, .inserted(session: first)), [.record("Final output."), .scheduleHide(timer: timer, after: 0.6)])
+        XCTAssertEqual(send(&state, .hotkeyDown), [])
+        send(&state, .hotkeyUp)
+        XCTAssertEqual(send(&state, .hotkeyDown), [.startCapture(session: second), .startPreview(session: second)])
+    }
+
+    func testPostprocessedBoundaryWhitespaceIsPreservedForInsertionAndSuccessHistory() {
+        var state = finalizing()
+        XCTAssertEqual(send(&state, .finalText(session: first, text: "\nHello. ")), [.insert(session: first, text: "\nHello. ")])
+        XCTAssertEqual(state.phase, .inserting(session: first, final: "\nHello. "))
+        XCTAssertEqual(send(&state, .inserted(session: first)), [.record("\nHello. "), .scheduleHide(timer: timer, after: 0.6)])
+        XCTAssertEqual(state.phase, .shown(final: "\nHello. "))
+    }
+
+    func testOptInTrailingSpaceIsPreservedForInsertionFailureHistory() {
+        var state = finalizing()
+        XCTAssertEqual(send(&state, .finalText(session: first, text: "Hello. ")), [.insert(session: first, text: "Hello. ")])
+        XCTAssertEqual(send(&state, .insertFailed(session: first, reason: "Paste failed")), [.record("Hello. "), .scheduleErrorClear(timer: timer, after: 2)])
+    }
+
+    func testReadinessRecoveryCannotStartCaptureBeforeOutstandingFinalAndInsertionFinish() {
+        var state = finalizing()
+        send(&state, .modelsFailed("unavailable"))
+        send(&state, .modelsReady)
+        XCTAssertEqual(state.phase, .finalizing(session: first, preview: "preview"))
+        XCTAssertEqual(send(&state, .hotkeyDown), [])
+        XCTAssertTrue(state.queuedStart)
+        XCTAssertEqual(send(&state, .finalText(session: first, text: "Final output.")), [.insert(session: first, text: "Final output.")])
+        XCTAssertEqual(send(&state, .inserted(session: first)), [.record("Final output."), .startCapture(session: second), .startPreview(session: second)])
+        XCTAssertEqual(state.phase, .listening(session: second, preview: "", seconds: 0))
+    }
+
+    func testReadinessRejectionAndNoticeTimerCannotReleaseOutstandingFinalOwnership() {
+        var state = finalizing()
+        send(&state, .modelsFailed("unavailable"))
+        XCTAssertEqual(send(&state, .hotkeyDown), [.scheduleErrorClear(timer: timer, after: 2)])
+        XCTAssertEqual(state.phase, .finalizing(session: first, preview: "preview"))
+        send(&state, .timerFired(timer))
+        XCTAssertEqual(state.phase, .finalizing(session: first, preview: "preview"))
+        send(&state, .hotkeyUp)
+        send(&state, .modelsReady)
+        XCTAssertEqual(send(&state, .hotkeyDown), [])
+        XCTAssertEqual(state.session, first)
+        XCTAssertTrue(state.queuedStart)
+        XCTAssertEqual(send(&state, .engineFailed(session: first, reason: "inference failed")), [.record("preview"), .log("engine: inference failed"), .scheduleErrorClear(timer: .init(rawValue: 2), after: 2)])
+        XCTAssertFalse(state.queuedStart)
         XCTAssertEqual(send(&state, .hotkeyDown), [])
         send(&state, .hotkeyUp)
         XCTAssertEqual(send(&state, .hotkeyDown), [.startCapture(session: second), .startPreview(session: second)])
