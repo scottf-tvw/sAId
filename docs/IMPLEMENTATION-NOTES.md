@@ -23,6 +23,27 @@ The design is the authority when an implementation-plan code sample disagrees wi
 - Publish only fixtures with clear redistribution rights: three CC BY 4.0 LibriSpeech clips with attribution, source IDs and hashes. Earlier Apple System Voice recordings stay local and are not repository fixtures.
 - Keep model contract tests explicitly opt-in and offline. Missing weights cause a skip; ordinary unit tests must not download models or access the microphone.
 
+## Integration rulings and tradeoffs
+
+These decisions resolve gaps or contradictions in the original implementation samples. The approved design and Scott's later instructions remain authoritative.
+
+| Decision | Reason | Cost or limitation |
+|---|---|---|
+| Follow the specification when plan samples disagree. | Some samples violated their own concurrency and state requirements. | Interface changes must be carried into dependent modules. |
+| Restore the clipboard after failure and cancellation too. | The clipboard-preservation requirement applies to every exit. | A failed insertion is recovered through History/Copy. |
+| Treat posted input as posting, not proof of acceptance. | macOS keyboard events have no universal target-app receipt. | Apps that ignore paste may require the selectable Unicode strategy. |
+| Surface preview errors through a throwing stream, including stop-time errors. | A separate error channel would complicate ordering and ownership. | Consumers must drain and handle stream termination correctly. |
+| Apply device changes through source replacement; retain each session's settings. | Active capture must stop and drain without orphaning its source. | A device change cancels active listening; already captured final/insertion work can finish. |
+| Mark app-generated keyboard events and bypass hotkey suppression for them. | A configurable hotkey can otherwise swallow the app's own insertion events. | The event-origin filter must stay consistent across both input paths. |
+| Publish attributed LibriSpeech fixtures instead of local Apple voice recordings. | The corpus has explicit redistribution terms. | Three clips from one speaker verify the pipeline, not Scott's vocabulary or broad accuracy. |
+| Allow cancellation during finalization/insertion while awaiting actual cleanup. | An idle visual state does not prove native work or clipboard ownership has ended. | Cancellation cannot retract keyboard events that have already been posted. |
+| Separate visible permission-checklist polling from a five-second enabled-state health check. | Revoked Input Monitoring can suppress the very callback that would detect its loss. | A small periodic permission read remains while dictation is enabled; real OS behavior needs smoke testing. |
+| Keep the primary HUD at 44 pt and place independent notices above it. | Errors can coexist with an active capture state. | A notice temporarily increases the total overlay height. |
+| Explicitly release native model ownership before confirmed cache reset/reload. | Retained controller/task references can keep an old engine alive after shutdown. | Reset is quiescent and idle-only; it is not an idle-unload feature. |
+| Defer additional injected permission-poll lifecycle tests after review found current behavior correct. | This was a nonblocking coverage suggestion, not a current defect. | Future changes to polling should add focused regressions; Scott's permission-loss smoke remains pending. |
+
+Settings also enter the controller mailbox synchronously, and each utterance retains its insertion sink and postprocessing snapshot. The hotkey bridge sends an ordered release after cancellation because the listener may omit a later release callback for that canceled hold. Regression tests exercise these production boundaries.
+
 ## Build environment
 
 - Active implementation uses a Codex-managed worktree, leaving the original checkout on `main`.

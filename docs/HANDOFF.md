@@ -26,7 +26,7 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - [PR #9](https://github.com/scottf-tvw/sAId/pull/9): final transcription on the same resident model; review clean.
 - [PR #10](https://github.com/scottf-tvw/sAId/pull/10): ordered controller and nonactivating HUD; review clean.
 - [PR #11](https://github.com/scottf-tvw/sAId/pull/11): full app shell, settings, History, permission recovery and signed bundle; review clean.
-- PRs #1–11 remain open and unmerged pending approval. Task 11 implementation is complete locally; its PR and independent final review are parent-owned and pending.
+- PRs #1–11 remain open and unmerged pending approval. Task 11 is complete at `42419f9`/`1cbf097`; its task review and scoped re-review approved. Its PR and the final whole-branch review remain pending.
 - Task 10 app shell/signed bundle is complete at `c35013e`/`a149c35`, base `75185b8`; independent review approved, menu-error fix re-review clean.
 - Task 9 controller/HUD is complete at `f1c3b3d`, review clean; 164 strict tests pass with two expected opt-in skips.
 - Task 7 Moonshine adapter/cache/preview is complete at `8a01472`, review clean; all 127 strict tests pass with cached-model contracts enabled. Task 8 final transcription is complete at `f1b24cd`, review clean.
@@ -124,7 +124,7 @@ Controller integration: `send(action,target:)` is synchronous/nonisolated and be
 
 ## Next work
 
-Parent: review Task 11 and the entire final branch independently, address load-bearing findings, create the remaining PR, then install the reviewed signed app in `/Applications/sAId.app`. Merge approval is still pending. Do not launch it or perform desktop automation on Scott's behalf.
+Parent: complete the independent whole-branch review, address load-bearing findings, create the remaining PR, then install the reviewed signed app in `/Applications/sAId.app`. Task 11 has passed task review after both installer/release destination races were fixed and re-reviewed. Merge approval is still pending. Do not launch it or perform desktop automation on Scott's behalf.
 
 First human milestone: Scott launches the app, grants Microphone/Input Monitoring/Accessibility through its checklist, waits for Models ready, copies a distinctive clipboard sentinel and dictates in **Notes** with Right Option. He should observe live words, one final insertion on release, then verify that pasting elsewhere restores the original sentinel. Record his report in `docs/SMOKE.md`; all 30 manual matrix rows remain **needs smoke**, including real paste delivery, secure-input refusal, focus, device changes, sleep/wake, and eight-hour memory residency.
 
