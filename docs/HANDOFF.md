@@ -14,7 +14,7 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - Public MIT repo: `github.com/scottf-tvw/sAId`.
 - Original checkout `/Volumes/Work/GitDev/sAId` remains on `main`.
 - **Active worktree:** `/Users/scottfreeman/.codex/worktrees/said-implementation/sAId`.
-- Current branch: `task/9-controller-hud`, layered on reviewed Tasks 1–6 and the Moonshine amendment.
+- Current branch: `task/10-app-shell`, layered on reviewed Tasks 1–9 and the Moonshine amendment.
 - [PR #1](https://github.com/scottf-tvw/sAId/pull/1): baseline menu-bar entry/test target (original engine pin, superseded by the amendment).
 - [PR #2](https://github.com/scottf-tvw/sAId/pull/2): pure state machine and async engine protocols.
 - [PR #3](https://github.com/scottf-tvw/sAId/pull/3): Moonshine-only dependency/design amendment (review clean).
@@ -24,6 +24,8 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - [PR #7](https://github.com/scottf-tvw/sAId/pull/7): clipboard-safe insertion and event-origin handling; review clean.
 - [PR #8](https://github.com/scottf-tvw/sAId/pull/8): resident Moonshine preview and verified cache; review clean.
 - [PR #9](https://github.com/scottf-tvw/sAId/pull/9): final transcription on the same resident model; review clean.
+- [PR #10](https://github.com/scottf-tvw/sAId/pull/10): ordered controller and nonactivating HUD; review clean.
+- Task 10 app shell/signed bundle is complete at `c35013e`/`a149c35`, base `75185b8`; independent review approved, menu-error fix re-review clean.
 - Task 9 controller/HUD is complete at `f1c3b3d`, review clean; 164 strict tests pass with two expected opt-in skips.
 - Task 7 Moonshine adapter/cache/preview is complete at `8a01472`, review clean; all 127 strict tests pass with cached-model contracts enabled. Task 8 final transcription is complete at `f1b24cd`, review clean.
 - Task 6 insertion is complete and reviewed, commits `7d22f0e`, `96a4f9f`; parent independently verified all 108 tests with strict concurrency and warnings-as-errors.
@@ -48,13 +50,15 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 
 7. Task 6: clipboard-safe insertion and selectable Unicode fallback; restore on cancellation/failure, preserve newer clipboard contents, reject concurrent transactions, refuse secure input. Generated events bypass hotkey handling. Nil native clipboard reads fail before mutation. **108 tests pass**, review clean after one fix round.
 
-The full app shell, settings, persistent History, permission UI and signed bundle remain to be implemented. A compiled menu-bar placeholder is not an end-to-end app.
+The full app shell, settings, persistent History, permission UI and signed Debug bundle are implemented in Task 10. Packaging, installation, final review and hardware acceptance remain.
 
 8. Task 7: one resident actor-owned Moonshine model, fresh preview streams, aggregated line updates, explicit stop-time errors, validated atomic downloads and official mirror fallback. **127 tests pass**, including six offline native sessions; review clean.
 
 9. Task 8: final transcription on the same resident runtime, lifecycle/audio validation, cancellation boundaries and recovery after errors. **137 tests pass** with two opt-in skips; offline final suite separately passes all ten tests and six preview→final sessions. Review clean. Final compute time on the bundled clips was approximately 0.30–0.50 seconds; WER matches the preview results.
 
 10. Task 9: ordered controller integrates capture, both Moonshine roles, insertion and History values; cancellation/shutdown await cleanup. Exact sample boundaries, queued physical actions, source/settings snapshots and errors are tested. Nonactivating 44 pt HUD is implemented. **164 tests pass** with two opt-in skips; review clean.
+
+11. Task 10: full app shell and shared stores, permission recovery, coherent per-session settings/insertion changes, model retry/reset with explicit native release, and signed Xcodegen bundle. **164 XCTest cases (two expected opt-in skips) plus 12 Swift Testing cases pass** with complete concurrency and warnings-as-errors. Signed Debug build, arm64/Developer ID/hardened-runtime/audio-input checks and bundled defaults/notices are verified. Independent review approved; the menu save-error visibility observation is fixed and re-reviewed. Extra injected permission-poll lifecycle tests are deferred as a coverage improvement; existing behavior passed review. The app has not been launched or installed.
 
 ## Current interfaces
 
@@ -72,7 +76,7 @@ Audio integration: `AudioCapture(inputDeviceUID:)` conforms to `CaptureSource`; 
 
 Insertion integration: `@MainActor TextInserter: TextSink` provides `insert(_:) async throws`; configure clipboard paste or direct Unicode. Completion means events posted and cleanup finished, not target acceptance. Calls reject overlap; controller owns queued presses. Record the final text in History on success or failure. `TextInsertionError.userMessage` provides secure-input or History-copy messaging.
 
-Controller integration: `send(action,target:)` is synchronous/nonisolated and belongs directly in the hotkey callback, preserving physical order. Async `configure`, `setEnabled`, `setModelReadiness` and `handle` acknowledge ordered commands. `states()` gives initial/current snapshots with newest-value buffering. Terminal `shutdown()` awaits actual capture, preview, inference and insertion cleanup; construct a new controller after replacing engine ownership. History values include start timestamp, target bundle ID, source and failure metadata. Main-actor `HUDPanel.update` observes phase and independent message.
+Controller integration: `send(action,target:)` is synchronous/nonisolated and belongs directly in the hotkey callback, preserving physical order. Async `configure`, `setEnabled`, `setModelReadiness` and `handle` acknowledge ordered commands. `sendConfiguration(capture:sink:postProcess:)` synchronously enqueues configuration before a subsequent physical press; capture, sink and postprocess are snapshotted per utterance. `states()` gives initial/current snapshots with newest-value buffering. Terminal `shutdown()` awaits actual capture, preview, inference and insertion cleanup; construct a new controller after replacing engine ownership. History values include start timestamp, target bundle ID, source and failure metadata. Main-actor `HUDPanel.update` observes phase and independent message.
 
 ## Models and test fixtures
 
@@ -89,14 +93,16 @@ Controller integration: `send(action,target:)` is synchronous/nonisolated and be
 - Swift 6.3.3 / Xcode 26.6; current baseline builds without warnings.
 - Each worktree needs its own `.build`. Symlinking the original cache produced duplicate absolute module paths and compiler crashes; a clean independent build passed.
 - xcodegen is installed. Developer ID identity exists for **Scott DL Freeman, team M2TEAF948X**; verify it when configuring packaging.
-- SPM alone does not produce the final .app bundle/TCC identity. Task10 creates the Xcodegen project and signed app.
+- SPM alone does not produce the final .app bundle/TCC identity. Task 10 created the Xcodegen project and signed app at `build/Build/Products/Debug/sAId.app` in the active worktree. Bundle checks confirm org.tvw.said, macOS15, arm64, LSUIElement and microphone purpose, Developer ID team M2TEAF948X, hardened runtime, and only audio-input entitlement. No GUI launch was performed.
 - Resources use Bundle.main. No app print(), no unchecked Sendable outside native engine adapters, no transcription in tap, converter input never reports endOfStream for temporary absence.
 - Borrowed Parakey code requires its MIT notice. Its old clipboard policy is not ours: preserve/restore clipboard with newer-user-change protection.
 
 ## Next work
 
-Continue Tasks 10–11 in order; the controller and HUD are implemented and reviewed. The Moonshine amendment is complete and remaining task briefs have been regenerated. The old sample code has been replaced by corrected contracts and test requirements; follow the amended spec and actual implemented interfaces.
+Continue Task 11: shared-engine benchmark, safe build/install/release scripts, final native/unit/build validation and whole-branch review. The controller and HUD are implemented and reviewed. The Moonshine amendment is complete and remaining task briefs have been regenerated. The old sample code has been replaced by corrected contracts and test requirements; follow the amended spec and actual implemented interfaces.
 
-Human assistance is expected once a signed full app is ready: grant Microphone/Input Monitoring/Accessibility and run `docs/SMOKE.md` in Notes and the other target apps. Real paste delivery, clipboard restoration, secure-input refusal, device changes, sleep/wake, and memory soak are **needs smoke**. Nothing has been marked passed without Scott's verification.
+The notarization Keychain profile `said-notary` is absent; signed local builds are available without it. Request secure profile provisioning only after the release pipeline is concrete. No credentials have been read.
+
+Human assistance is expected once the reviewed full app is installed: grant Microphone/Input Monitoring/Accessibility and run `docs/SMOKE.md` in Notes and the other target apps. Real paste delivery, clipboard restoration, secure-input refusal, device changes, sleep/wake, and memory soak are **needs smoke**. Nothing has been marked passed without Scott's verification.
 
 Scott uses the Mac through Splashtop. **Never lock the screen or invoke a Computer Use lock workflow.** No microphone capture, permission grants, synthetic desktop events, or screen automation have been performed in this implementation run.
