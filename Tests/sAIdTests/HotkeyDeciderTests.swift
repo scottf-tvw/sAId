@@ -143,6 +143,82 @@ final class HotkeyDeciderTests: XCTestCase {
         listener.stop()
     }
 
+    func testRestartWithBothOptionsHeldDoesNotTurnReleaseIntoPress() {
+        let tap = FakeHotkeyTap()
+        let listener = HotkeyListener(tap: tap)
+        var actions: [HotkeyAction] = []
+        listener.onAction = { actions.append($0) }
+        for _ in 0..<2 {
+            tap.keysDown = [58, 61]
+            XCTAssertTrue(listener.start())
+            _ = tap.send(event(.flagsChanged, 61, flags: option))
+            _ = tap.send(event(.flagsChanged, 58))
+            XCTAssertTrue(actions.isEmpty)
+            listener.stop()
+        }
+        tap.keysDown = []
+        XCTAssertTrue(listener.start())
+        _ = tap.send(event(.flagsChanged, 61, flags: option))
+        _ = tap.send(event(.flagsChanged, 61))
+        XCTAssertEqual(actions, [.pressed, .released])
+        listener.stop()
+    }
+
+    func testChangingToAlreadyHeldModifierRequiresAFreshPress() {
+        let tap = FakeHotkeyTap()
+        let listener = HotkeyListener(hotkey: Hotkey(keycode: 49), tap: tap)
+        var actions: [HotkeyAction] = []
+        listener.onAction = { actions.append($0) }
+        XCTAssertTrue(listener.start())
+        _ = tap.send(event(.keyDown, 49))
+        tap.keysDown = [58, 61]
+        listener.setHotkey(.rightOption)
+        _ = tap.send(event(.flagsChanged, 61, flags: option))
+        _ = tap.send(event(.flagsChanged, 58))
+        XCTAssertEqual(actions, [.pressed, .cancel])
+        _ = tap.send(event(.flagsChanged, 61, flags: option))
+        _ = tap.send(event(.flagsChanged, 61))
+        XCTAssertEqual(actions, [.pressed, .cancel, .pressed, .released])
+        listener.stop()
+    }
+
+    func testTapRecoveryAfterMissedReleaseCancelsAndResynchronizes() {
+        for disableType in [CGEventType.tapDisabledByTimeout, .tapDisabledByUserInput] {
+            let tap = FakeHotkeyTap()
+            let listener = HotkeyListener(tap: tap)
+            var actions: [HotkeyAction] = []
+            listener.onAction = { actions.append($0) }
+            XCTAssertTrue(listener.start())
+            _ = tap.send(event(.flagsChanged, 61, flags: option))
+            // Right Option was released while the tap could not deliver events.
+            tap.keysDown = [58]
+            XCTAssertFalse(tap.send(event(disableType, 0)))
+            XCTAssertEqual(actions, [.pressed, .cancel])
+            _ = tap.send(event(.flagsChanged, 61, flags: option))
+            _ = tap.send(event(.flagsChanged, 61, flags: option))
+            XCTAssertEqual(actions, [.pressed, .cancel, .pressed, .released])
+            listener.stop()
+        }
+    }
+
+    func testTapRecoveryWhileBothOptionsHeldWaitsForFreshPress() {
+        let tap = FakeHotkeyTap()
+        let listener = HotkeyListener(tap: tap)
+        var actions: [HotkeyAction] = []
+        listener.onAction = { actions.append($0) }
+        XCTAssertTrue(listener.start())
+        _ = tap.send(event(.flagsChanged, 61, flags: option))
+        tap.keysDown = [58, 61]
+        _ = tap.send(event(.tapDisabledByTimeout, 0))
+        _ = tap.send(event(.flagsChanged, 61, flags: option))
+        _ = tap.send(event(.flagsChanged, 58))
+        XCTAssertEqual(actions, [.pressed, .cancel])
+        _ = tap.send(event(.flagsChanged, 61, flags: option))
+        _ = tap.send(event(.flagsChanged, 61))
+        XCTAssertEqual(actions, [.pressed, .cancel, .pressed, .released])
+        listener.stop()
+    }
+
     func testListenerDestructionStopsTapAndLateCallbackIsHarmless() {
         let tap = FakeHotkeyTap()
         var listener: HotkeyListener? = HotkeyListener(tap: tap)
@@ -161,6 +237,8 @@ private final class FakeHotkeyTap: HotkeyTap {
     var stops = 0
     var enables = 0
     var succeeds = true
+    var keysDown: Set<UInt16> = []
+    func isKeyDown(_ keycode: UInt16) -> Bool { keysDown.contains(keycode) }
     func start(handler: @escaping @MainActor (HotkeyEventSnapshot) -> Bool) -> Bool {
         starts += 1
         guard succeeds else { return false }

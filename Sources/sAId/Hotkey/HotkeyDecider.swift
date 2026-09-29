@@ -32,8 +32,10 @@ struct HotkeyDecider: Sendable {
 
     init(hotkey: Hotkey = .rightOption) { self.hotkey = hotkey }
 
-    mutating func reset() {
-        physicalDown = false
+    /// Seed from a resource-boundary snapshot whenever event history was lost.
+    /// An already-held key is inactive until released and pressed again.
+    mutating func reset(physicalKeyDown: Bool = false) {
+        physicalDown = physicalKeyDown
         active = false
         suppressEscapeKeyUp = false
     }

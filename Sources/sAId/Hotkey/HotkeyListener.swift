@@ -8,6 +8,7 @@ protocol HotkeyTap: AnyObject {
     func start(handler: @escaping @MainActor (HotkeyEventSnapshot) -> Bool) -> Bool
     func stop()
     func enable()
+    func isKeyDown(_ keycode: UInt16) -> Bool
 }
 
 @MainActor
@@ -32,6 +33,7 @@ final class HotkeyListener {
             guard let self, self.running else { return false }
             return self.handle(snapshot)
         }
+        if running { decider.reset(physicalKeyDown: tap.isKeyDown(decider.hotkey.keycode)) }
         if !running { Log.hotkey.error("Event tap could not start; verify Input Monitoring permission") }
         return running
     }
@@ -46,14 +48,20 @@ final class HotkeyListener {
         guard hotkey != decider.hotkey else { return }
         let wasActive = decider.active
         decider = HotkeyDecider(hotkey: hotkey)
+        if running { decider.reset(physicalKeyDown: tap.isKeyDown(hotkey.keycode)) }
         if wasActive { onAction?(.cancel) }
     }
 
     private func handle(_ snapshot: HotkeyEventSnapshot) -> Bool {
         if snapshot.typeRawValue == CGEventType.tapDisabledByTimeout.rawValue
             || snapshot.typeRawValue == CGEventType.tapDisabledByUserInput.rawValue {
+            // We cannot reconstruct missed down/up cycles. End the interrupted
+            // action and synchronize the physical side before accepting more events.
+            let wasActive = decider.active
+            decider.reset(physicalKeyDown: tap.isKeyDown(decider.hotkey.keycode))
             tap.enable()
-            Log.hotkey.notice("Event tap re-enabled after disable notification")
+            Log.hotkey.notice("Event tap re-enabled after physical-key synchronization")
+            if wasActive { onAction?(.cancel) }
             return false
         }
         let decision = decider.transition(snapshot)
@@ -122,6 +130,10 @@ private final class SystemHotkeyTap: HotkeyTap {
     }
 
     func enable() { if let tap { CGEvent.tapEnable(tap: tap, enable: true) } }
+
+    func isKeyDown(_ keycode: UInt16) -> Bool {
+        CGEventSource.keyState(.hidSystemState, key: keycode)
+    }
 
     func stop() {
         // Invalidate/remove the callback source before releasing its retained context.
