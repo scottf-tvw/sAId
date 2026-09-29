@@ -43,7 +43,7 @@ final class MoonshineModelContractTests: XCTestCase {
 }
 
 /// Literal lowercase alphanumeric tokens; punctuation separates words. No number expansion or reference rewriting.
-private func contractWER(reference: String, hypothesis: String) -> Double {
+func contractWER(reference: String, hypothesis: String) -> Double {
     let expected = reference.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init)
     let actual = hypothesis.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init)
     var previous = Array(0...actual.count)

@@ -1,7 +1,7 @@
 import Foundation
 import MoonshineVoice
 
-enum MoonshineEngineError: Error { case notLoaded, notStreaming, alreadyStreaming, loading }
+enum MoonshineEngineError: Error { case notLoaded, notStreaming, alreadyStreaming, loading, invalidAudio }
 
 enum NativePreviewEvent: Sendable {
     case line(id: UInt64, text: String, complete: Bool)
@@ -9,10 +9,11 @@ enum NativePreviewEvent: Sendable {
 }
 
 /// Synchronous seam. Only the owning engine actor calls these methods; there are no native
-/// objects or callbacks crossing executors. Task 8 extends this same resident runtime for final text.
-protocol PreviewRuntime: AnyObject {
+/// objects or callbacks crossing executors. Preview and final use the same resident native model.
+protocol MoonshineRuntime: AnyObject {
     func makeStream() throws -> any PreviewRuntimeStream
     func setKeyterms(_ terms: [String]) throws
+    func transcribeWithoutStreaming(audioData: [Float], sampleRate: Int32, flags: UInt32) throws -> [String]
 }
 protocol PreviewRuntimeStream: AnyObject {
     func start() throws
@@ -21,11 +22,11 @@ protocol PreviewRuntimeStream: AnyObject {
     func takeEvents() -> [NativePreviewEvent]
 }
 
-actor MoonshineEngine: PreviewTranscriber {
+actor MoonshineEngine: PreviewTranscriber, FinalTranscriber {
     private let modelRoot: URL
-    private let runtimeFactory: @Sendable (URL) throws -> any PreviewRuntime
+    private let runtimeFactory: @Sendable (URL) throws -> any MoonshineRuntime
     private let needsCache: Bool
-    private var runtime: (any PreviewRuntime)?
+    private var runtime: (any MoonshineRuntime)?
     private var nativeStream: (any PreviewRuntimeStream)?
     private var continuation: AsyncThrowingStream<PreviewLine, Error>.Continuation?
     private var session: UInt64 = 0
@@ -39,7 +40,7 @@ actor MoonshineEngine: PreviewTranscriber {
         self.runtimeFactory = { try NativeMoonshineRuntime(root: $0) }
     }
     /// The factory is invoked on this actor; deterministic unit tests need neither disk assets nor native inference.
-    init(runtimeFactory: @escaping @Sendable (URL) throws -> any PreviewRuntime) {
+    init(runtimeFactory: @escaping @Sendable (URL) throws -> any MoonshineRuntime) {
         self.modelRoot = defaultModelRoot; self.runtimeFactory = runtimeFactory; self.needsCache = false
     }
 
@@ -73,6 +74,21 @@ actor MoonshineEngine: PreviewTranscriber {
         }
         try runtime?.setKeyterms(cleaned)
         keyterms = cleaned
+    }
+
+    /// Whole-utterance inference shares the resident runtime and never yields actor ownership.
+    /// The native call is synchronous and cannot be preempted. Cancellation is checked at its
+    /// boundaries so a result completed after cancellation cannot reach the caller for insertion.
+    func transcribe(_ pcm16k: [Float]) async throws -> String {
+        try Task.checkCancellation()
+        guard let runtime else { throw MoonshineEngineError.notLoaded }
+        guard nativeStream == nil else { throw MoonshineEngineError.alreadyStreaming }
+        guard pcm16k.allSatisfy({ $0.isFinite }) else { throw MoonshineEngineError.invalidAudio }
+        guard pcm16k.contains(where: { $0 != 0 }) else { return "" }
+        try Task.checkCancellation()
+        let lines = try runtime.transcribeWithoutStreaming(audioData: pcm16k, sampleRate: 16_000, flags: 0)
+        try Task.checkCancellation()
+        return lines.filter { !$0.isEmpty }.joined(separator: " ")
     }
 
     func start() throws -> AsyncThrowingStream<PreviewLine, Error> {
@@ -154,10 +170,13 @@ actor MoonshineEngine: PreviewTranscriber {
     }
 }
 
-private final class NativeMoonshineRuntime: PreviewRuntime {
+private final class NativeMoonshineRuntime: MoonshineRuntime {
     let transcriber: Transcriber
     init(root: URL) throws { transcriber = try Transcriber(modelPath: root.path, modelArch: .mediumStreaming) }
     func setKeyterms(_ terms: [String]) throws { try transcriber.setKeyterms(terms) }
+    func transcribeWithoutStreaming(audioData: [Float], sampleRate: Int32, flags: UInt32) throws -> [String] {
+        try transcriber.transcribeWithoutStreaming(audioData: audioData, sampleRate: sampleRate, flags: flags).lines.map(\.text)
+    }
     func makeStream() throws -> any PreviewRuntimeStream {
         NativeMoonshineStream(stream: try transcriber.createStream(updateInterval: 0.3))
     }

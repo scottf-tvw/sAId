@@ -12,10 +12,13 @@ private final class RuntimeProbe: Sendable {
     }
     let state = Mutex(State())
 }
-private final class FakeRuntime: PreviewRuntime {
+private final class FakeRuntime: MoonshineRuntime {
     let probe: RuntimeProbe
     init(_ probe: RuntimeProbe) { self.probe = probe; probe.state.withLock { $0.loaded += 1 } }
     func setKeyterms(_ terms: [String]) throws { probe.state.withLock { $0.terms = terms } }
+    func transcribeWithoutStreaming(audioData: [Float], sampleRate: Int32, flags: UInt32) throws -> [String] {
+        throw ProbeError.failed // Preview-only tests never request final inference.
+    }
     func makeStream() throws -> any PreviewRuntimeStream {
         probe.state.withLock { $0.created += 1 }; return FakeStream(probe)
     }
