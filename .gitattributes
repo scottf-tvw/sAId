@@ -1,0 +1,2 @@
+# Preserve the pinned upstream license byte-for-byte, including its whitespace.
+Resources/Notices/MOONSHINE-LICENSE -whitespace

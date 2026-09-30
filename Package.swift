@@ -1,33 +1,30 @@
 // swift-tools-version: 6.1
 // sAId — push-to-talk dictation for Apple Silicon.
-// Two resident engines: Qwen3-ASR (final text, via speech-swift) and
-// Moonshine mediumStreaming (live HUD preview, via moonshine-swift).
+// One resident Moonshine mediumStreaming model serves final text and live HUD preview.
 import PackageDescription
 
 let package = Package(
     name: "sAId",
-    platforms: [.macOS(.v15)],   // speech-swift needs MLState (macOS 15+)
+    platforms: [.macOS(.v15)],
     products: [
         .executable(name: "sAId", targets: ["sAId"]),
+        .executable(name: "said-bench", targets: ["SaidBench"]),
     ],
     dependencies: [
-        // Qwen3-ASR (MLX + CoreML) — Apache-2.0. Pin to a commit before v1.0 (see HANDOFF).
-        .package(url: "https://github.com/soniqo/speech-swift.git", branch: "main"),
         // Moonshine Voice — ships Moonshine.xcframework as a binary target.
-        .package(url: "https://github.com/moonshine-ai/moonshine-swift.git", from: "0.1.5"),
+        .package(url: "https://github.com/moonshine-ai/moonshine-swift.git", exact: "0.1.5"),
     ],
     targets: [
+        .target(name: "SaidEngine", dependencies: [.product(name: "MoonshineVoice", package: "moonshine-swift")]),
+        .executableTarget(name: "SaidBench", dependencies: ["SaidEngine"], path: "Sources/SaidBench"),
         .executableTarget(
             name: "sAId",
-            dependencies: [
-                .product(name: "Qwen3ASR", package: "speech-swift"),
-                .product(name: "MoonshineVoice", package: "moonshine-swift"),
-            ],
+            dependencies: ["SaidEngine"],
             path: "Sources/sAId"
         ),
         .testTarget(
             name: "sAIdTests",
-            dependencies: ["sAId"],
+            dependencies: ["sAId", "SaidEngine", "SaidBench"],
             path: "Tests/sAIdTests"
         ),
     ]
