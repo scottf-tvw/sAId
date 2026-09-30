@@ -1,0 +1,20 @@
+sAId — third-party notices
+
+sAId is licensed under the MIT License; see SAID-LICENSE.
+
+Portions of the hotkey, text-insertion, corrections, and filler helpers are
+adapted from Parakey, Copyright (c) 2026 Richard Courtman, MIT License.
+https://github.com/rcourtman/parakey
+Full license: PARAKEY-LICENSE.
+
+Moonshine Voice Swift package: https://github.com/moonshine-ai/moonshine-swift
+Pinned package version: 0.1.5. Its Moonshine.xcframework is statically linked.
+Upstream project: https://github.com/moonshine-ai/moonshine
+The English Medium Streaming model and first-party code are MIT licensed.
+Full upstream license, including its third-party notices: MOONSHINE-LICENSE.
+Retrieved from upstream commit 547d00660e70aa976d506842cb1c851688043024:
+https://github.com/moonshine-ai/moonshine/blob/547d00660e70aa976d506842cb1c851688043024/LICENSE
+SHA256: fa7d1174dd8af6a7cd280be20b80d10095ed4c19b5b20b61a7715c3ad790dc5f
+
+The full upstream notice set is retained; this app uses the English streaming
+speech-to-text model, not the legacy non-English or text-to-speech models.
