@@ -3,15 +3,18 @@
 Run on real hardware after any change to Hotkey, AudioCapture, Inserter, HUD or Permissions.
 These are Scott's to verify; an agent reports them as "needs smoke" in the PR, never as done.
 
-First milestone (still **needs smoke**): the reviewed Release app is installed at `/Applications/sAId.app`. Launch it manually,
-grant Microphone/Input Monitoring/Accessibility in its checklist, and wait for Models ready. Copy
+## Reported results (2026-09-29)
+
+Scott reports using sAId on `freeman-hm-mini` to dictate a message into this chat, and confirms live words appeared in the HUD. This confirms the basic live transcription/insertion path and visible preview by human report. Preview latency, exact insertion count and the clipboard were not measured or checked; no result is inferred for other targets, secure input, device recovery or the extended soak.
+
+Next first-milestone check (**clipboard not yet checked**): with sAId ready on the home Mini, copy
 `CLIPBOARD-SENTINEL-42`, place the cursor in **Notes**, hold **Right Option**, speak, and release.
 Confirm live words in the HUD, exactly one final insertion, and restoration of the sentinel when
 pasted elsewhere. Record this result before working through the remaining matrix. Signed fixture
 inference does not verify GUI focus, microphone/input permissions, or actual paste delivery.
 
 Setup: copy something distinctive to the clipboard first (e.g. `CLIPBOARD-SENTINEL-42`).
-After each row, paste (⌘V) somewhere harmless and confirm the sentinel is back. All rows below are **needs smoke** until Scott records a result; automated tests do not satisfy them. Scott controls sleep, permissions and real app input; the agent must not lock the Mac or run these actions through desktop automation.
+After each row, paste (⌘V) somewhere harmless and confirm the sentinel is back. The report above partially covers live preview; the full row criteria below remain **needs smoke** until Scott records each result; automated tests do not satisfy them. Scott controls sleep, permissions and real app input; the agent must not lock the Mac or run these actions through desktop automation.
 
 | # | Target | Steps | Pass when |
 |---|---|---|---|

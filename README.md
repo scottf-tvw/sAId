@@ -15,9 +15,10 @@ Requires macOS 15 or later and Apple Silicon.
 
 The standalone menu-bar app, settings, History, permission recovery, benchmark, and packaging
 pipeline are implemented. Signed Debug/Release bundles and cached native inference have been
-verified. Hardware acceptance remains pending: actual microphone capture, hotkey delivery, HUD
-focus, insertion/clipboard behavior, permission recovery, and the eight-hour residency test need
-Scott's checks in [SMOKE.md](docs/SMOKE.md). Automated tests do not establish those results.
+verified. Scott reports live preview and transcription inserted into this chat from his home Mini.
+Full hardware acceptance remains pending: clipboard restoration, other target apps, HUD focus,
+permission recovery and the eight-hour residency test still need the checks in [SMOKE.md](docs/SMOKE.md).
+Automated tests do not establish those results.
 
 The reviewed implementation is on `task/11-packaging-benchmark`; [PR #12](https://github.com/scottf-tvw/sAId/pull/12)
 contains the final integration and packaging work. PRs #1–12 remain open and unmerged pending approval.
