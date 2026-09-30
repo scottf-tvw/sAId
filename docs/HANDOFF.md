@@ -14,9 +14,17 @@ Paced 16 kHz corpus fixtures on the existing resident shared engine measured pre
 
 Copy diagnostics now includes the latest completed session's monotonic stage durations and safe outcome/finish-trigger categories: release intake mailbox wait, capture stop/drain, preview drain wait and stop-call duration, whole-utterance final, text processing, final-result mailbox wait and insertion posting/cleanup. On normal release, preview stop is included in the drain wait; failure/cancellation can stop preview partly or wholly earlier, including before release. Do not add stop and drain as independent serial durations. Total timing starts at synchronous release intake (or audio-cap processing) and ends at controller completion, which can include History bookkeeping; it does not measure target acceptance. An omitted stage has no completed measurement. Reports retain no transcript, corrections, clipboard bytes, targets, error strings or machine/network identifiers. They are per controller lifetime and reset with an explicit model reset/relaunch. Cancellation reports follow owned cleanup; queued sessions preserve their own timing and finish origin. No extra per-key tasks were added.
 
-Final `make test` passed: 181 XCTest tests (2 cached-model opt-in skips), 12 Swift Testing tests and 15 packaging tests. After the scoped preview-timing wording review, all five timing tests passed and signed Release 1.0.1 build 2 was rebuilt; the unchanged full suite was not repeated. The rebuilt product passed the existing strict signature/designated-requirement/team, hardened-runtime, arm64, single audio-input entitlement and resource byte checks. Its executable SHA256 is `517b71dde8a7f088f40c8db0947f693bd57e840793651c4fcb4b3a73ba2b815e`; no installation has been performed for this update. Five deterministic regressions exercise stage boundaries, cancellation/final failure/short tap, queued-session insertion failure, capped-key release and a blocked mailbox. Initial RED evidence and raw layout/fixture logs are in ignored `.superpowers/sdd/2026-09-29-home-smoke-fixes/`; see its `task-1-report.md` for commands and final verification.
+Final `make test` passed: 181 XCTest tests (2 cached-model opt-in skips), 12 Swift Testing tests and 15 packaging tests. After the scoped preview-timing wording review, all five timing tests passed and signed Release 1.0.1 build 2 was rebuilt; the unchanged full suite was not repeated. The rebuilt product passed the existing strict signature/designated-requirement/team, hardened-runtime, arm64, single audio-input entitlement and resource byte checks. Its executable SHA256 is `517b71dde8a7f088f40c8db0947f693bd57e840793651c4fcb4b3a73ba2b815e`. Five deterministic regressions exercise stage boundaries, cancellation/final failure/short tap, queued-session insertion failure, capped-key release and a blocked mailbox. Initial RED evidence and raw layout/fixture logs are in ignored `.superpowers/sdd/2026-09-29-home-smoke-fixes/`; see its `task-1-report.md` for commands and final verification.
 
-Parent owns independent review, installation, signed local-test ZIP, push/PR and delivery. No app launch, real microphone/TCC/clipboard/input, desktop lock, install, transfer, push, notarization or PR occurred in this implementation task. Next human check: quit/replace the old app, confirm diagnostics identifies **1.0.1**, check every Settings tab plus History/Permissions at initial/minimum/grown sizes, then dictate one short utterance and Copy diagnostics immediately after insertion. Supply the stage report with approximate observed delay. Clipboard restoration remains separately untested.
+Independent review accepted implementation `dbc2577`; its one minor preview-timing wording finding was fixed at `b9f9a68` and accepted in scoped re-review. Parent installed the reviewed Release at `/Applications/sAId.app` on the Studio without launching it. Installed version/build, signature/resources and executable match were verified; the installer lock and owned staging directory were removed normally. Installation evidence is in `final-install.log` and `final-installed-verification.log` beside the review reports. [PR #13](https://github.com/scottf-tvw/sAId/pull/13) is open and attached, stacked on PR #12 against main. No merge, notarization or public release occurred.
+
+The new 14 MiB signed local-test ZIP is `/Users/scottfreeman/Downloads/sAId-home-test-1.0.1.QvUedQ/sAId-1.0.1-local-test.zip`, SHA256 `2656cd706202a1e01925c904098df0239f017870aff4b2fb2a9240503e7e1168`. Its extracted signature/resources and executable match were verified and the owned extraction was removed. Pull it from the home Mini while VPN is connected:
+
+```bash
+scp scottfreeman@10.1.16.112:Downloads/sAId-home-test-1.0.1.QvUedQ/sAId-1.0.1-local-test.zip ~/Downloads/
+```
+
+Home installation of this update has not been confirmed. Next human check: quit sAId, unzip and replace the old app in Applications, reopen it, confirm diagnostics identifies **1.0.1**, check every Settings tab plus History/Permissions at initial/minimum/grown sizes, then dictate one short utterance and Copy diagnostics immediately after insertion. Supply the stage report with approximate observed delay. Clipboard restoration remains separately untested; test the sentinel before Copy diagnostics deliberately replaces the clipboard. Agents have performed no app launch, real microphone/TCC/clipboard/input or desktop lock.
 
 ## Current decision
 
@@ -43,7 +51,8 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - [PR #10](https://github.com/scottf-tvw/sAId/pull/10): ordered controller and nonactivating HUD; review clean.
 - [PR #11](https://github.com/scottf-tvw/sAId/pull/11): full app shell, settings, History, permission recovery and signed bundle; review clean.
 - [PR #12](https://github.com/scottf-tvw/sAId/pull/12): shared benchmark, safe signed packaging and final integration fixes; reviewed and installed.
-- PRs #1–12 remain open and unmerged pending approval. Task 11 is complete at `42419f9`/`1cbf097`; task review and scoped re-review approved. The final whole-branch review and one consolidated fix/re-review wave are complete at `77232c8`: all three requested fixes are accepted, with two nonblocking follow-ups documented below.
+- [PR #13](https://github.com/scottf-tvw/sAId/pull/13): useful utility window sizes and content-free session stage diagnostics, reviewed and installed as 1.0.1 build 2 on the Studio; home retest pending.
+- PRs #1–13 remain open and unmerged pending approval. Task 11 is complete at `42419f9`/`1cbf097`; task review and scoped re-review approved. The final whole-branch review and one consolidated fix/re-review wave are complete at `77232c8`: all three requested fixes are accepted, with two nonblocking follow-ups documented below.
 - Task 10 app shell/signed bundle is complete at `c35013e`/`a149c35`, base `75185b8`; independent review approved, menu-error fix re-review clean.
 - Task 9 controller/HUD is complete at `f1c3b3d`, review clean; 164 strict tests pass with two expected opt-in skips.
 - Task 7 Moonshine adapter/cache/preview is complete at `8a01472`, review clean; all 127 strict tests pass with cached-model contracts enabled. Task 8 final transcription is complete at `f1b24cd`, review clean.
@@ -159,7 +168,7 @@ Controller integration: `send(action,target:)` is synchronous/nonisolated and be
 
 ## Next work
 
-The original implementation is installed at `/Applications/sAId.app`, and PR #12 remains open. The home-smoke follow-up described above awaits parent review/delivery and Scott's live retest. Merge approval is still pending. Keep the worktree for PR feedback and live acceptance; do not merge, launch the app or perform desktop automation on Scott's behalf. This thread is long: use this handoff and the saved project memory to start a fresh thread for smoke results.
+The reviewed 1.0.1 follow-up is installed at `/Applications/sAId.app` on the Studio, and PR #13 is open. The new ZIP described above is ready for Scott's home Mini; live window acceptance and a stage diagnostic report are next. Home latency is not yet resolved or measured. Merge approval is still pending. Keep the worktree for PR feedback and live acceptance; do not merge, launch the app or perform desktop automation on Scott's behalf. This thread is long: use this handoff and the saved project memory to start a fresh thread for smoke results.
 
 Human testing has started: Scott reports successful live transcription/insertion into this chat on the home Mini, with visible live HUD words. Next, copy a distinctive clipboard sentinel, dictate in **Notes** with Right Option, then paste on a new line to verify the original sentinel returns. Clipboard restoration is explicitly untested. Record results in `docs/SMOKE.md`; full matrix criteria remain pending, including measured preview latency, other target apps, secure-input refusal, focus, device changes, sleep/wake and eight-hour memory residency.
 
@@ -167,7 +176,7 @@ The last profile check found `said-notary` absent. The existing human question a
 
 ```bash
 xcrun notarytool store-credentials said-notary --team-id M2TEAF948X
-make release VERSION=1.0.0
+make release VERSION=1.0.1
 ```
 
 Do not send credentials through chat or source files. No credentials were read and no additional profiles probed. Signed local builds are ready without notarization; a notarized distribution ZIP has not been created.

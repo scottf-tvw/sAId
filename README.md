@@ -20,10 +20,12 @@ Full hardware acceptance remains pending: clipboard restoration, other target ap
 permission recovery and the eight-hour residency test still need the checks in [SMOKE.md](docs/SMOKE.md).
 Automated tests do not establish those results.
 
-The reviewed implementation is on `task/11-packaging-benchmark`; [PR #12](https://github.com/scottf-tvw/sAId/pull/12)
-contains the final integration and packaging work. PRs #1–12 remain open and unmerged pending approval.
-The signed Release app is installed at `/Applications/sAId.app` on the implementation Mac and has not
-been launched. Two nonblocking follow-ups and the full verification record are in [HANDOFF.md](docs/HANDOFF.md).
+The latest reviewed update is on `fix/home-smoke-latency-windows`; [PR #13](https://github.com/scottf-tvw/sAId/pull/13)
+fixes utility windows opening too small and adds session stage timings to Copy diagnostics. The reported
+home-Mini insertion delay still needs those measurements. PRs #1–13 remain open and unmerged pending approval.
+Signed Release 1.0.1 (build 2) is installed at `/Applications/sAId.app` on the implementation Mac without
+an agent launch, and a signed local-test ZIP is ready for the home retest. The transfer instructions,
+remaining checks and full verification record are in [HANDOFF.md](docs/HANDOFF.md).
 
 ## Build and install
 
@@ -102,7 +104,7 @@ prerecorded clips measures compute time, **not live preview or release-to-paste 
 ## Release
 
 ```bash
-make release VERSION=1.0.0
+make release VERSION=1.0.1
 ```
 
 The script sets the bundle version, builds Release, stages and signs it with Developer ID and hardened
