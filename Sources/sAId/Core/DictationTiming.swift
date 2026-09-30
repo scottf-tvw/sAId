@@ -6,7 +6,7 @@ struct DictationTiming: Sendable, Equatable {
     enum Stage: String, Sendable, CaseIterable {
         case mailboxWait = "Release mailbox wait"
         case captureDrain = "Capture stop/drain"
-        case previewDrain = "Preview queue/drain (includes stop)"
+        case previewDrain = "Preview drain wait"
         case previewStop = "Preview stop call (native decode/events)"
         case finalInference = "Whole-utterance final inference"
         case postProcess = "Text processing"
@@ -27,6 +27,7 @@ struct DictationTiming: Sendable, Equatable {
             if let duration = stages[stage] { lines.append("\(stage.rawValue): \(Self.milliseconds(duration)) ms") }
         }
         if let finishToCompletion { lines.append("Finish to controller completion: \(Self.milliseconds(finishToCompletion)) ms") }
+        lines.append("Preview stop normally overlaps drain; failure/cancellation may stop earlier. Do not add them.")
         lines.append("Insertion timing includes posting/cleanup; target acceptance is not measured.")
         return lines.joined(separator: "\n")
     }
