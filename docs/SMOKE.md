@@ -7,6 +7,12 @@ These are Scott's to verify; an agent reports them as "needs smoke" in the PR, n
 
 Scott reports using sAId on `freeman-hm-mini` to dictate a message into this chat, and confirms live words appeared in the HUD. This confirms the basic live transcription/insertion path and visible preview by human report. Preview latency, exact insertion count and the clipboard were not measured or checked; no result is inferred for other targets, secure input, device recovery or the extended soak.
 
+Scott subsequently reports slow text after release and undersized Settings/utility windows. Follow-up **1.0.1 (build 2)** fixes reproduced hosting-size collapse and adds content-free stage timing; home latency remains unresolved.
+
+After replacing the old app while it is quit, open Settings and inspect General, Corrections, Text and Model. Open History (empty/populated as applicable) and Permissions. Confirm useful initial sizes, controls reachable at minimum size, scrolling where content grows, and resizing larger. These checks still need Scott's live acceptance; offscreen geometry checks passed without presenting windows.
+
+Dictate one short utterance and choose **Copy diagnostics** immediately after insertion. Confirm the first line identifies **sAId 1.0.1**, then share the stage timing with the approximate delay you saw. Release mailbox, capture drain, preview drain/stop, final inference, processing and insertion completion identify where time was spent. Preview stop is nested within preview drain; do not add both. Insertion timing includes cleanup and is not a target acceptance receipt. Fixture timings on the Studio do not establish Mini performance. The report contains durations/categories rather than transcript/error/clipboard contents; copying diagnostics deliberately replaces the clipboard, so do the sentinel restoration test separately.
+
 Next first-milestone check (**clipboard not yet checked**): with sAId ready on the home Mini, copy
 `CLIPBOARD-SENTINEL-42`, place the cursor in **Notes**, hold **Right Option**, speak, and release.
 Confirm live words in the HUD, exactly one final insertion, and restoration of the sentinel when

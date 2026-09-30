@@ -2,6 +2,22 @@
 
 Read `CLAUDE.md`, the amended design, then the implementation plan. Scott authorized completing the project autonomously and asking for human help only when needed.
 
+## Home smoke follow-up (1.0.1 build 2)
+
+Scott reports that live HUD and insertion work on the home Mini, but text feels slow after release and utility windows open shrunken. The delay has not been quantified or reproduced on that machine.
+
+Offscreen AppKit reproduction found that default `NSHostingController.sizingOptions` propagates ideal/min/max sizing when attached, replacing the window's initial content rectangle (the probe observed 1×0). Disabling every option preserved the initial size but erased the minimum on later layout. The fix retains only `.minSize`, constrains the root view's minimum to available screen space, and sets content size after hosting attachment. Settings opens at 660×640 with minimum 600×500; History 640×500/minimum 500×320; Permissions 620×360/minimum 580×320, with scrolling for its explanatory text. These values are bounded by the current screen's visible frame, including title-bar space and a margin; windows remain resizable. Titles and permission checklist lifecycle callbacks are unchanged.
+
+Invisible production-factory probes verified stable initial/minimum geometry and growth to 900×800, Settings and each of its four tab contents (grouped forms/list retain scrolling), empty History, 50 synthetic History entries and Permissions. Access-only changes to expose private tab contents for the scratch probe were restored, and scratch tests were removed before final validation. This is geometry/layout evidence, not Scott's live visual acceptance or a test on another physical display size.
+
+Paced 16 kHz corpus fixtures on the existing resident shared engine measured preview stop 0.00008–0.256 seconds and full final inference 0.217–0.346 seconds. Combined tail after the last feed call returned was 0.270–0.528 seconds. The probe feeds at audio deadlines, but awaits the last feed before timing stop/final; it excludes capture drain, outstanding last-feed work, event mailbox delays, insertion and target acceptance. It does not establish the home Mini's release latency or justify removing native trailing preview decoding or whole-utterance final inference. The 150 ms clipboard-restore delay occurs after event posting. No speed improvement is claimed.
+
+Copy diagnostics now includes the latest completed session's monotonic stage durations and safe outcome/finish-trigger categories: release intake mailbox wait, capture stop/drain, preview queue/drain with nested stop-call duration, whole-utterance final, text processing, final-result mailbox wait and insertion posting/cleanup. Total timing starts at synchronous release intake (or audio-cap processing) and ends at controller completion, which can include History bookkeeping; it does not measure target acceptance. An omitted stage has no completed measurement. Reports retain no transcript, corrections, clipboard bytes, targets, error strings or machine/network identifiers. They are per controller lifetime and reset with an explicit model reset/relaunch. Cancellation reports follow owned cleanup; queued sessions preserve their own timing and finish origin. No extra per-key tasks were added.
+
+Final `make test` passed: 181 XCTest tests (2 cached-model opt-in skips), 12 Swift Testing tests and 15 packaging tests. Signed Release 1.0.1 build 2 passed the existing strict signature/designated-requirement/team, hardened-runtime, arm64, single audio-input entitlement and resource byte checks. Its executable SHA256 is `87bd75abd2e5146bda73120691f8d0e2e4ed9bef83774501a87096aed145b89c`; no installation has been performed for this update. Five deterministic regressions exercise stage boundaries, cancellation/final failure/short tap, queued-session insertion failure, capped-key release and a blocked mailbox. Initial RED evidence and raw layout/fixture logs are in ignored `.superpowers/sdd/2026-09-29-home-smoke-fixes/`; see its `task-1-report.md` for commands and final verification.
+
+Parent owns independent review, installation, signed local-test ZIP, push/PR and delivery. No app launch, real microphone/TCC/clipboard/input, desktop lock, install, transfer, push, notarization or PR occurred in this implementation task. Next human check: quit/replace the old app, confirm diagnostics identifies **1.0.1**, check every Settings tab plus History/Permissions at initial/minimum/grown sizes, then dictate one short utterance and Copy diagnostics immediately after insertion. Supply the stage report with approximate observed delay. Clipboard restoration remains separately untested.
+
 ## Current decision
 
 **Moonshine English Medium Streaming for BOTH live preview and final transcription.** Scott changed the original Qwen choice during this implementation session and supplied the official current-model list:
@@ -14,7 +30,7 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - Public MIT repo: `github.com/scottf-tvw/sAId`.
 - Original checkout `/Volumes/Work/GitDev/sAId` remains on `main`.
 - **Active worktree:** `/Users/scottfreeman/.codex/worktrees/said-implementation/sAId`.
-- Current branch: `task/11-packaging-benchmark`, layered on reviewed Tasks 1–10 and the Moonshine amendment.
+- Current branch: `fix/home-smoke-latency-windows`, based on code baseline `e49a33e` and follow-up plan commit `ce97a9e`. Earlier implementation work is preserved below as history.
 - [PR #1](https://github.com/scottf-tvw/sAId/pull/1): baseline menu-bar entry/test target (original engine pin, superseded by the amendment).
 - [PR #2](https://github.com/scottf-tvw/sAId/pull/2): pure state machine and async engine protocols.
 - [PR #3](https://github.com/scottf-tvw/sAId/pull/3): Moonshine-only dependency/design amendment (review clean).
@@ -143,7 +159,7 @@ Controller integration: `send(action,target:)` is synchronous/nonisolated and be
 
 ## Next work
 
-Implementation and reviews are complete, the signed app is installed at `/Applications/sAId.app`, and PR #12 is open and attached. Merge approval is still pending. Keep the worktree for PR feedback and live acceptance; do not merge, launch the app or perform desktop automation on Scott's behalf. This thread is long: use this handoff and the saved project memory to start a fresh thread for smoke results.
+The original implementation is installed at `/Applications/sAId.app`, and PR #12 remains open. The home-smoke follow-up described above awaits parent review/delivery and Scott's live retest. Merge approval is still pending. Keep the worktree for PR feedback and live acceptance; do not merge, launch the app or perform desktop automation on Scott's behalf. This thread is long: use this handoff and the saved project memory to start a fresh thread for smoke results.
 
 Human testing has started: Scott reports successful live transcription/insertion into this chat on the home Mini, with visible live HUD words. Next, copy a distinctive clipboard sentinel, dictate in **Notes** with Right Option, then paste on a new line to verify the original sentinel returns. Clipboard restoration is explicitly untested. Record results in `docs/SMOKE.md`; full matrix criteria remain pending, including measured preview latency, other target apps, secure-input refusal, focus, device changes, sleep/wake and eight-hour memory residency.
 

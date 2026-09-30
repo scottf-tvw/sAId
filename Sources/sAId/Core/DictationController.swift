@@ -17,6 +17,7 @@ actor DictationController {
     }
     private struct Request: Sendable {
         let command: Command
+        let receivedAt: Duration
         var completion: CheckedContinuation<Void, Never>?
     }
     private struct Session {
@@ -27,6 +28,7 @@ actor DictationController {
         let postProcess: PostProcess
         let sink: any TextSink
         let buffer: DictationSessionBuffer
+        let timing: DictationTimingRecorder
         var starting: Task<AsyncThrowingStream<[Float], Error>, Error>?
         var capture: Task<Void, Never>?
         var preview: Task<Void, Never>?
@@ -57,6 +59,7 @@ actor DictationController {
     private var postProcess: PostProcess
     private let record: @Sendable (DictationHistoryEntry) async -> Void
     private let log: @Sendable (String) async -> Void
+    private nonisolated let now: @Sendable () -> Duration
     private let delay: @Sendable (Duration) async throws -> Void
     private var timer: Task<Void, Never>?
     private var observers: [UUID: AsyncStream<DictationState>.Continuation] = [:]
@@ -64,14 +67,16 @@ actor DictationController {
     private var enabled = true
     private var closed = false
     private(set) var currentState = DictationState()
+    private(set) var latestTiming: DictationTiming?
 
     init(capture: any CaptureSource, preview: any PreviewTranscriber, final: any FinalTranscriber,
          sink: any TextSink, postProcess: PostProcess = PostProcess(),
          record: @escaping @Sendable (DictationHistoryEntry) async -> Void = { _ in },
          log: @escaping @Sendable (String) async -> Void = { Log.controller($0) },
-         delay: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
+         delay: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
+         now: @escaping @Sendable () -> Duration = { .nanoseconds(Int64(clamping: DispatchTime.now().uptimeNanoseconds)) }) {
         self.capture = capture; self.preview = preview; self.final = final; self.sink = sink
-        self.postProcess = postProcess; self.record = record; self.log = log; self.delay = delay
+        self.postProcess = postProcess; self.record = record; self.log = log; self.delay = delay; self.now = now
         let pair = AsyncStream<Request>.makeStream()
         requests = pair.stream; input = pair.continuation
     }
@@ -116,12 +121,12 @@ actor DictationController {
         return true
     }
     private nonisolated func enqueue(_ command: Command) {
-        guard submit(Request(command: command)) else { return }
+        guard submit(Request(command: command, receivedAt: now())) else { return }
         Task { await startWorker() }
     }
     private nonisolated func request(_ command: Command) async {
         await withCheckedContinuation { completion in
-            if !submit(Request(command: command, completion: completion)) { completion.resume() }
+            if !submit(Request(command: command, receivedAt: now(), completion: completion)) { completion.resume() }
             else { Task { await startWorker() } }
         }
     }
@@ -131,7 +136,7 @@ actor DictationController {
     }
     private func run() async {
         for await request in requests {
-            if !closed { await process(request.command) }
+            if !closed { await process(request.command, receivedAt: request.receivedAt) }
             if case .hotkey(.pressed, _) = request.command {
                 cancellationEligibility.withLock { $0.pendingPresses -= 1 }
             }
@@ -139,7 +144,7 @@ actor DictationController {
         }
         worker = nil
     }
-    private func process(_ command: Command) async {
+    private func process(_ command: Command, receivedAt: Duration) async {
         switch command {
         case .hotkey(let action, let target):
             switch action {
@@ -148,7 +153,10 @@ actor DictationController {
                 if !currentState.hotkeyHeld { pendingTarget = target }
                 await apply(.hotkeyDown)
             case .released:
-                if case .listening(let id, _, _) = currentState.phase { await drain(id); await reconcile(id) }
+                if case .listening(let id, _, _) = currentState.phase {
+                    session?.timing.trigger(.release, at: receivedAt)
+                    await drain(id); await reconcile(id)
+                }
                 await apply(.hotkeyUp)
             case .cancel:
                 let cancelsWork = !currentState.queuedStart
@@ -179,10 +187,17 @@ actor DictationController {
         case .progress(let id):
             guard session?.id == id, currentState.session == id else { return }
             if let buffer = session?.buffer,
-               await buffer.sampleCount >= DictationSessionBuffer.sampleLimit { await drain(id) }
+               await buffer.sampleCount >= DictationSessionBuffer.sampleLimit {
+                session?.timing.trigger(.audioCap, at: now())
+                await drain(id)
+            }
             await reconcile(id)
         case .preview(let id): await reconcilePreview(id)
-        case .event(let event): await apply(event)
+        case .event(let event):
+            if case .finalText(let id, _) = event, session?.id == id, currentState.session == id {
+                session?.timing.wait(.finalDispatchWait, since: receivedAt)
+            }
+            await apply(event)
         case .shutdown:
             enabled = false
             await abort()
@@ -197,11 +212,31 @@ actor DictationController {
     private func apply(_ event: DictationEvent) async {
         // Capture the originating context before reducer effects can start a queued session.
         let context = session
+        let previousSession = currentState.session
         let (state, effects) = DictationReducer.reduce(currentState, event)
         currentState = state
         cancellationEligibility.withLock { $0.hasSession = state.session != nil }
         publish()
         for effect in effects { await execute(effect, event: event, context: context) }
+        if let context, previousSession == context.id, state.session != context.id {
+            let outcome: DictationTiming.Outcome
+            switch event {
+            case .cancel: return // Cancellation includes owned cleanup before publishing timing.
+            case .inserted: outcome = .inserted
+            case .insertFailed: outcome = .insertionFailed
+            case .engineFailed: outcome = .finalFailed
+            case .captureFailed: outcome = .captureFailed
+            case .hotkeyUp: outcome = .shortTap
+            case .finalText: outcome = state.readiness == .ready ? .nothingHeard : .unavailable
+            default: outcome = .unavailable
+            }
+            finishTiming(context, outcome: outcome)
+        }
+    }
+    private func finishTiming(_ context: Session, outcome: DictationTiming.Outcome) {
+        // A queued session can already exist, but its timings never inherit this worker's data.
+        guard latestTiming.map({ $0.session.rawValue < context.id.rawValue }) ?? true else { return }
+        latestTiming = context.timing.finish(outcome)
     }
     private func execute(_ effect: DictationEffect, event: DictationEvent, context: Session?) async {
         switch effect {
@@ -236,7 +271,8 @@ actor DictationController {
     private func startCapture(_ id: DictationSessionID) async {
         let source = capture, buffer = DictationSessionBuffer()
         session = Session(id: id, target: pendingTarget, timestamp: Date(), source: source,
-                          postProcess: postProcess, sink: sink, buffer: buffer)
+                          postProcess: postProcess, sink: sink, buffer: buffer,
+                          timing: DictationTimingRecorder(session: id, now: now))
         let starting = Task { try await source.start() }
         session?.starting = starting
         let log = log
@@ -259,7 +295,8 @@ actor DictationController {
     }
 
     private func startPreview(_ id: DictationSessionID) {
-        guard currentState.session == id, currentState.previewActive, let buffer = session?.buffer else { return }
+        guard currentState.session == id, currentState.previewActive, let context = session else { return }
+        let buffer = context.buffer, timing = context.timing
         let preview = preview
         session?.preview = Task { [weak self] in
             do {
@@ -274,10 +311,13 @@ actor DictationController {
                 }
                 do { for await chunk in buffer.previewInput { try await preview.feed(chunk) } }
                 catch { await buffer.previewFailed(String(describing: error)); self?.enqueue(.preview(id)) }
+                timing.begin(.previewStop)
                 await preview.stop()
+                timing.end(.previewStop)
                 await observer.value
             } catch {
-                await buffer.previewFailed(String(describing: error)); await preview.stop()
+                await buffer.previewFailed(String(describing: error))
+                timing.begin(.previewStop); await preview.stop(); timing.end(.previewStop)
             }
             self?.enqueue(.preview(id))
         }
@@ -285,17 +325,22 @@ actor DictationController {
     private func stopCapture(_ id: DictationSessionID) async {
         guard let context = session, context.id == id, !context.stoppedCapture else { return }
         session?.stoppedCapture = true
+        context.timing.begin(.captureDrain)
         // A source may still be installing its tap. Never let stop race ahead of start.
         _ = try? await context.starting?.value
         await context.source.stop()
         await context.capture?.value // Producer is quiescent; consume every buffered accepted chunk.
+        context.timing.end(.captureDrain)
+        context.timing.begin(.previewDrain)
         await context.buffer.finishAudio()
     }
     private func stopPreview(_ id: DictationSessionID) async {
         guard let context = session, context.id == id, !context.stoppedPreview else { return }
         session?.stoppedPreview = true
+        context.timing.begin(.previewDrain)
         await context.buffer.finishAudio()
         await context.preview?.value
+        context.timing.end(.previewDrain)
         await reconcilePreview(id)
     }
     private func drain(_ id: DictationSessionID) async {
@@ -332,11 +377,19 @@ actor DictationController {
         let samples = await context.buffer.samples, final = final
         session?.operation = Task { [weak self] in
             do {
+                context.timing.begin(.finalInference)
                 let text = try await final.transcribe(samples)
+                context.timing.end(.finalInference)
                 try Task.checkCancellation()
-                self?.enqueue(.event(.finalText(session: id, text: context.postProcess.apply(text))))
-            } catch is CancellationError { }
-            catch { self?.enqueue(.event(.engineFailed(session: id, reason: String(describing: error)))) }
+                context.timing.begin(.postProcess)
+                let processed = context.postProcess.apply(text)
+                context.timing.end(.postProcess)
+                self?.enqueue(.event(.finalText(session: id, text: processed)))
+            } catch is CancellationError { context.timing.end(.finalInference) }
+            catch {
+                context.timing.end(.finalInference)
+                self?.enqueue(.event(.engineFailed(session: id, reason: String(describing: error))))
+            }
         }
     }
     private func insert(_ id: DictationSessionID, text: String) {
@@ -344,10 +397,14 @@ actor DictationController {
         let sink = context.sink, log = log
         session?.operation = Task { [weak self] in
             do {
-                try await sink.insert(text); try Task.checkCancellation()
+                context.timing.begin(.insertion)
+                try await sink.insert(text)
+                context.timing.end(.insertion)
+                try Task.checkCancellation()
                 self?.enqueue(.event(.inserted(session: id)))
-            } catch is CancellationError { }
+            } catch is CancellationError { context.timing.end(.insertion) }
             catch {
+                context.timing.end(.insertion)
                 await log("insert: \((error as? TextInsertionError)?.diagnosticCategory ?? "unknown")")
                 let message = (error as? TextInsertionError)?.userMessage ?? "Paste failed — copy from History"
                 self?.enqueue(.event(.insertFailed(session: id, reason: message)))
@@ -376,6 +433,7 @@ actor DictationController {
         context.operation?.cancel()
         await drain(context.id)
         await context.operation?.value
+        finishTiming(context, outcome: .canceled)
     }
     private func abort() async {
         // First cancel may only withdraw the queued key; the second ends the active job.

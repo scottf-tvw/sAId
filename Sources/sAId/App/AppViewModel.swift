@@ -255,6 +255,11 @@ final class AppViewModel: ObservableObject {
         // Deliberately enumerate safe fields; never serialize state/history/errors or corrections.
         let modelStatus: String
         switch model.readiness { case .ready: modelStatus = "ready"; case .loading: modelStatus = "loading"; case .failed: modelStatus = "failed" }
-        copy("sAId \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development")\nmacOS \(ProcessInfo.processInfo.operatingSystemVersionString)\nArchitecture: arm64\nMoonshine: 0.1.5 / mediumStreaming\nModel: \(modelStatus)\nEnabled: \(settings.preferences.enabled)\nMicrophone: \(permissions.microphone)\nInput Monitoring: \(permissions.inputMonitoring)\nAccessibility: \(permissions.accessibility)\nHotkey: \(settings.preferences.hotkey.label)\nInsertion: \(settings.preferences.insertionStrategy.rawValue)\nHistory entries: \(history.entries.count)")
+        let diagnostics = "sAId \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development")\nmacOS \(ProcessInfo.processInfo.operatingSystemVersionString)\nArchitecture: arm64\nMoonshine: 0.1.5 / mediumStreaming\nModel: \(modelStatus)\nEnabled: \(settings.preferences.enabled)\nMicrophone: \(permissions.microphone)\nInput Monitoring: \(permissions.inputMonitoring)\nAccessibility: \(permissions.accessibility)\nHotkey: \(settings.preferences.hotkey.label)\nInsertion: \(settings.preferences.insertionStrategy.rawValue)\nHistory entries: \(history.entries.count)"
+        let controller = controller
+        Task {
+            let timing = await controller.latestTiming
+            copy(diagnostics + "\n" + (timing?.diagnosticText ?? "Last session timing: none"))
+        }
     }
 }
