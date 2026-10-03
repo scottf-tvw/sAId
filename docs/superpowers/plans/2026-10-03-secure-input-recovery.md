@@ -27,13 +27,15 @@ TextInserter queries IsSecureEventInputEnabled freshly at every check and does n
 
 Files: new Sources/sAId/Insert/FocusedInputSecurity.swift; TextInserter.swift; App/AppViewModel.swift for last-check diagnostics; TextInserterTests.swift and FocusedInputSecurityTests.swift; project.yml version 1.0.2/build3; CLAUDE/spec/HANDOFF/SMOKE/README.
 
-Interfaces: FocusedInputSecurity enum (.ordinaryText, .secure, .unverified); native read() -> FocusedInputSecurity; TextInserter injected focusedInput closure alongside existing global secureInput closure. A content-free latest check records global enabled and focused-control classification for Copy diagnostics, without probing the menu's current focus.
+Interfaces: FocusedInputSecurity enum (.ordinaryText, .secure, .unverified, .focusChanged); native read() -> FocusedInputSecurity; TextInserter injected focusedInput closure alongside existing global secureInput closure. A content-free latest check records global enabled and focused-control classification for Copy diagnostics, without probing the menu's current focus.
 
-- [ ] Add failing insertion regressions using actual TextInserter with fake clipboard/events and injected global/field state. A permanent global true must allow ordinary text after leaving a password field without replacing the inserter.
-- [ ] Add minimal enum/injection scaffolding retaining the old global refusal and capture behavioral RED failures; no real AX reads in tests.
-- [ ] Implement metadata classifier and bounded native adapter. Query the frontmost application, focused element and role/subrole; verify focused identity and frontmost PID after reads. Allow only recognized text roles with ordinary/absent documented subroles. Failed subrole reads are not absent.
-- [ ] Replace boolean-only rejection with the combined check; add separate unverified/global-active failure and safe latest-check diagnostics. Run focused tests.
-- [ ] Test malformed/unsupported AX values, known secure vs ordinary/custom roles, global true/false, immediate secure rechecks and repeated recovery. Native reads remain outside hotkey callbacks.
-- [ ] Run make test and signed Release build; review once with a fresh reviewer and fix any material findings. No redundant unchanged suites/native model runs.
-- [ ] Commit, push task branch, create/attach PR against main stacked on PR13. Preserve worktree and evidence; do not merge or publish a release.
-- [ ] Install signed build on Studio only if prior app is not running and installation is safe; create uniquely named signed local-test ZIP and verify extracted signature/resources/binary. Supply transfer instructions for home retest; no launch. Record live recovery as pending until Scott confirms.
+- [x] Add failing insertion regressions using actual TextInserter with fake clipboard/events and injected global/field state. A permanent global true must allow ordinary text after leaving a password field without replacing the inserter.
+- [x] Add minimal enum/injection scaffolding retaining the old global refusal and capture behavioral RED failures; no real AX reads in tests.
+- [x] Implement metadata classifier and bounded native adapter. Query the frontmost application, focused element and role/subrole; verify focused identity and frontmost PID after reads. Allow only recognized text roles with ordinary/absent documented subroles. Failed subrole reads are not absent.
+- [x] Replace boolean-only rejection with the combined check; add separate unverified/global-active failure and safe latest-check diagnostics. Run focused tests.
+- [x] Test malformed/unsupported AX values, known secure vs ordinary/custom roles, global true/false, immediate secure rechecks and repeated recovery. Native reads remain outside hotkey callbacks.
+- [x] Run make test and signed Release build; review once with a fresh reviewer and fix any material findings. No redundant unchanged suites/native model runs.
+- [x] Commit, push task branch, create/attach PR against main stacked on PR13. Preserve worktree and evidence; do not merge or publish a release.
+- [x] Install signed build on Studio only if prior app is not running and installation is safe; create uniquely named signed local-test ZIP and verify extracted signature/resources/binary. Supply transfer instructions for home retest; no launch. Record live recovery as pending until Scott confirms.
+
+Completed 2026-10-03: implementation1116a98; independent review found two Important delivery-boundary races, both reproduced RED and fixed at a77f5ec with full suite195XCTest(2skips)+12SwiftTesting+15Python passing. Signed1.0.2/build3 installed/verified on Studio without launch; extracted ZIP verified; PR14 open/attached. Actual home recovery and OS hotkey behavior remain human acceptance, not an automated pass. Evidence/worktree retained.

@@ -10,7 +10,17 @@ The fix reads focused-control Accessibility role/subrole metadata anew before cl
 
 Native AX messaging uses 50 ms timeouts on the individual application/element objects; each inspection makes at most four attribute reads and does not change the process-wide AX timeout. It checks frontmost PID and focused identity again before accepting metadata. It never reads field values, selections, labels, titles or URLs, never walks parent containers and never disables Secure Input. Copy diagnostics records the latest insertion check's global boolean, classification and decision; it does not inspect the newly focused menu or retain AX elements/PIDs. Clipboard cleanup, cancellation and security rejection without fallback remain intact.
 
-Regression tests cover 20 repeated secure→ordinary transitions on one inserter while the global flag stays true, secure fields with the global flag false, unreadable-control recovery, clipboard-time and Unicode-chunk focus changes, metadata/error decoding and stale-focus rejection. Full suite and signed Release verification are recorded in `.superpowers/sdd/2026-10-03-secure-input-recovery/`; independent review and delivery are in progress. No real desktop/input/microphone/TCC operation or security enable/disable call was performed.
+Regression tests cover 20 repeated secure→ordinary transitions on one inserter while the global flag stays true, secure fields with the global flag false, unreadable-control recovery, clipboard-time and Unicode-chunk focus changes, metadata/error decoding and stale-focus rejection. Independent review identified two delivery races during AX reads; both were reproduced with failing regressions and fixed at `a77f5ec`. Cancellation is rechecked after inspection and clipboard ownership immediately before each paste event. The final full suite passed: **195 XCTest cases (2 expected opt-in skips), 12 Swift Testing cases and 15 packaging tests**. Signed Release 1.0.2 build 3 passed signature/resources/architecture/entitlement checks; executable SHA256 is `de5d518c1028cfac0f24be818ba368ff9d8d1379b3632f739cabc503cb7b19d1`. Evidence and the review are in `.superpowers/sdd/2026-10-03-secure-input-recovery/`; delivery is complete on the Studio. No real desktop/input/microphone/TCC operation or security enable/disable call was performed.
+
+Signed 1.0.2 build 3 is installed and verified at `/Applications/sAId.app` on the Studio, without launch. The executable matches the rebuilt Release; installer lock/staging and the owned ZIP extraction were removed normally. [PR #14](https://github.com/scottf-tvw/sAId/pull/14) is open and attached against main, stacked on PR #13. No merge, notarization or public release was performed.
+
+The final 14 MiB signed local-test ZIP is `/Users/scottfreeman/Downloads/sAId-home-test-1.0.2.ytr3ux/sAId-1.0.2-local-test.zip`, SHA256 `47058266aa7ce1818e693a2788406584bc65092c563c3e460f2fabba6a11021f`. Extracted signature/resources/binary match were verified. The unpublished pre-review archive was removed so it cannot be mistaken for the fixed build. From the home Mini while VPN is connected:
+
+```bash
+scp scottfreeman@10.1.16.112:Downloads/sAId-home-test-1.0.2.ytr3ux/sAId-1.0.2-local-test.zip ~/Downloads/
+```
+
+Quit sAId, unzip and replace it in Applications, then reopen. Home installation has not been confirmed. All build/test/install/review processes have completed; no idle background tasks remain.
 
 Next human acceptance: after installing the update, repeat ordinary dictation, enter/leave a real password field, then return to ordinary text without restarting sAId. A real password field must still refuse; normal text should resume. If refusal remains, copy diagnostics immediately and report whether the HUD/hotkey still responds. macOS can itself suppress event-tap hotkeys while another process holds Secure Input; this change corrects sAId's insertion policy and cannot promise to disable another app's system protection. Earlier window/latency and clipboard acceptance remain pending unless Scott supplies results.
 
@@ -64,7 +74,8 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - [PR #11](https://github.com/scottf-tvw/sAId/pull/11): full app shell, settings, History, permission recovery and signed bundle; review clean.
 - [PR #12](https://github.com/scottf-tvw/sAId/pull/12): shared benchmark, safe signed packaging and final integration fixes; reviewed and installed.
 - [PR #13](https://github.com/scottf-tvw/sAId/pull/13): useful utility window sizes and content-free session stage diagnostics, reviewed and installed as 1.0.1 build 2 on the Studio; home retest pending.
-- PRs #1–13 remain open and unmerged pending approval. Task 11 is complete at `42419f9`/`1cbf097`; task review and scoped re-review approved. The final whole-branch review and one consolidated fix/re-review wave are complete at `77232c8`: all three requested fixes are accepted, with two nonblocking follow-ups documented below.
+- [PR #14](https://github.com/scottf-tvw/sAId/pull/14): focused-field Secure Input recovery and delivery-race fixes, tested and installed as 1.0.2 build 3 on the Studio; home recovery retest pending.
+- PRs #1–14 remain open and unmerged pending approval. Task 11 is complete at `42419f9`/`1cbf097`; task review and scoped re-review approved. The final whole-branch review and one consolidated fix/re-review wave are complete at `77232c8`: all three requested fixes are accepted, with two nonblocking follow-ups documented below.
 - Task 10 app shell/signed bundle is complete at `c35013e`/`a149c35`, base `75185b8`; independent review approved, menu-error fix re-review clean.
 - Task 9 controller/HUD is complete at `f1c3b3d`, review clean; 164 strict tests pass with two expected opt-in skips.
 - Task 7 Moonshine adapter/cache/preview is complete at `8a01472`, review clean; all 127 strict tests pass with cached-model contracts enabled. Task 8 final transcription is complete at `f1b24cd`, review clean.
@@ -180,7 +191,7 @@ Controller integration: `send(action,target:)` is synchronous/nonisolated and be
 
 ## Next work
 
-The reviewed 1.0.1 follow-up is installed at `/Applications/sAId.app` on the Studio, and PR #13 is open. The new ZIP described above is ready for Scott's home Mini; live window acceptance and a stage diagnostic report are next. Home latency is not yet resolved or measured. Merge approval is still pending. Keep the worktree for PR feedback and live acceptance; do not merge, launch the app or perform desktop automation on Scott's behalf. This thread is long: use this handoff and the saved project memory to start a fresh thread for smoke results.
+The 1.0.2 Secure Input recovery follow-up is installed at `/Applications/sAId.app` on the Studio, and PR #14 is open. The latest ZIP at the top of this handoff is ready for Scott's home Mini; secure→ordinary recovery is the next live check. Earlier window acceptance, clipboard restoration and a latency stage report remain pending; home latency is not yet resolved or measured. Merge approval is still pending. Keep the worktree for PR feedback and live acceptance; do not merge, launch the app or perform desktop automation on Scott's behalf. This thread is long: use this handoff and the saved project memory to start a fresh thread for smoke results.
 
 Human testing has started: Scott reports successful live transcription/insertion into this chat on the home Mini, with visible live HUD words. Next, copy a distinctive clipboard sentinel, dictate in **Notes** with Right Option, then paste on a new line to verify the original sentinel returns. Clipboard restoration is explicitly untested. Record results in `docs/SMOKE.md`; full matrix criteria remain pending, including measured preview latency, other target apps, secure-input refusal, focus, device changes, sleep/wake and eight-hour memory residency.
 
@@ -188,7 +199,7 @@ The last profile check found `said-notary` absent. The existing human question a
 
 ```bash
 xcrun notarytool store-credentials said-notary --team-id M2TEAF948X
-make release VERSION=1.0.1
+make release VERSION=1.0.2
 ```
 
 Do not send credentials through chat or source files. No credentials were read and no additional profiles probed. Signed local builds are ready without notarization; a notarized distribution ZIP has not been created.
