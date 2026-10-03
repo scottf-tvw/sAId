@@ -250,6 +250,41 @@ final class TextInserterTests: XCTestCase {
         XCTAssertEqual(TextInserter.latestSecurityCheck?.refusal, .focusChanged)
     }
 
+    func testClipboardChangedDuringSecurityInspectionIsNotPastedOrOverwritten() async {
+        let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
+        let field = MutableFocusedInput(.ordinaryText)
+        let sink = TextInserter(pasteboard: board, events: events, secureInput: { true }, focusedInput: {
+            field.reads += 1
+            if field.reads == 2 { board.externalCopy("new external copy") }
+            return field.value
+        }, delay: { _ in })
+        await expect(.clipboardChanged) { try await sink.insert("dictation") }
+        XCTAssertEqual(board.items, [["public.utf8-plain-text": Data("new external copy".utf8)]])
+        XCTAssertTrue(events.posted.isEmpty)
+        XCTAssertEqual(events.unicodePreparations, 0)
+    }
+
+    func testCancellationDuringPreEventSecurityInspectionPostsNothingForEitherStrategy() async {
+        for strategy in TextInsertionStrategy.allCases {
+            let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
+            let field = MutableFocusedInput(.ordinaryText)
+            let sink = TextInserter(pasteboard: board, events: events, strategy: strategy,
+                                    secureInput: { true }, focusedInput: {
+                field.reads += 1
+                // Unicode also checks before preparing events; cancel in the actual pre-post check.
+                if field.reads == (strategy == .clipboardPaste ? 2 : 3) {
+                    withUnsafeCurrentTask { $0?.cancel() }
+                }
+                return field.value
+            }, delay: { _ in })
+            let insertion = Task { try await sink.insert("canceled dictation") }
+            do { try await insertion.value; XCTFail("Expected cancellation for \(strategy)") }
+            catch { XCTAssertTrue(error is CancellationError) }
+            XCTAssertTrue(events.posted.isEmpty, "Canceled delivery for \(strategy)")
+            XCTAssertEqual(board.items, rich)
+        }
+    }
+
     func testSecureInputIsCheckedAgainImmediatelyBeforeDelivery() async {
         let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
         var secure = false
@@ -439,5 +474,6 @@ private final class InsertionDelayGate {
 @MainActor
 private final class MutableFocusedInput {
     var value: FocusedInputSecurity
+    var reads = 0
     init(_ value: FocusedInputSecurity) { self.value = value }
 }

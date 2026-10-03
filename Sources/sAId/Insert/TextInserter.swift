@@ -116,6 +116,8 @@ final class TextInserter: TextSink {
             guard pasteboard.changeCount == generation else { throw TextInsertionError.clipboardChanged }
             for event in prepared {
                 try checkDeliveryAllowed()
+                // AX inspection can block while another process replaces the clipboard.
+                guard pasteboard.changeCount == generation else { throw TextInsertionError.clipboardChanged }
                 posted = true
                 event.post()
             }
@@ -154,6 +156,8 @@ final class TextInserter: TextSink {
         let field = focusedInput()
         let check = InsertionSecurityCheck(globalSecureInput: secureInput(), focusedInput: field)
         Self.latestSecurityCheck = check
+        // Cancellation may arrive from another actor during synchronous AX messaging.
+        try Task.checkCancellation()
         if let refusal = check.refusal { throw refusal }
     }
 }
