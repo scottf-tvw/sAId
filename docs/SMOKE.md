@@ -3,6 +3,14 @@
 Run on real hardware after any change to Hotkey, AudioCapture, Inserter, HUD or Permissions.
 These are Scott's to verify; an agent reports them as "needs smoke" in the PR, never as done.
 
+## Secure Input recovery report (2026-10-03)
+
+Scott reports that all fields eventually become “Secure input field,” preventing dictation. **1.0.2 build 3** corrects the blanket system-wide flag check with fresh focused-control metadata. Automated tests verify repeated recovery, password refusal, changing focus and clipboard safety; real hardware acceptance remains pending.
+
+After quitting/replacing/reopening the app, confirm version 1.0.2 in Copy diagnostics. Dictate in an ordinary field, enter a password field (refusal expected), leave it, and dictate in ordinary text again without restarting. Repeat in the app where the long-running failure occurred. If blocked again, copy diagnostics immediately; the `Last insertion security` line records the check at insertion time, not the menu's focus. Include whether the HUD still responds and whether restarting sAId helps. No actual password contents are needed. Test the clipboard sentinel separately before copying diagnostics.
+
+An unverified control while global Secure Input is on remains blocked with “Secure Input active”; refocus a known ordinary text field and close stale password dialogs if necessary. The update never disables system security. If macOS suppresses the hotkey itself, report that distinctly from a responsive HUD followed by insertion refusal.
+
 ## Reported results (2026-09-29)
 
 Scott reports using sAId on `freeman-hm-mini` to dictate a message into this chat, and confirms live words appeared in the HUD. This confirms the basic live transcription/insertion path and visible preview by human report. Preview latency, exact insertion count and the clipboard were not measured or checked; no result is inferred for other targets, secure input, device recovery or the extended soak.

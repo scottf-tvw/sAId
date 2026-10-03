@@ -259,7 +259,8 @@ final class AppViewModel: ObservableObject {
         let controller = controller
         Task {
             let timing = await controller.latestTiming
-            copy(diagnostics + "\n" + (timing?.diagnosticText ?? "Last session timing: none"))
+            let security = TextInserter.latestSecurityCheck?.diagnosticText ?? "Last insertion security: none"
+            copy(diagnostics + "\n" + security + "\n" + (timing?.diagnosticText ?? "Last session timing: none"))
         }
     }
 }

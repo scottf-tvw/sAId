@@ -2,6 +2,8 @@
 
 _Status: approved design, amended by Scott on 2026-09-29 to use Moonshine for both preview and final transcription. Owner: Scott Freeman. Current implementation state: `docs/HANDOFF.md`._
 
+_2026-10-03 bug-fix amendment: Scott reports that after running for a while all fields are classified as secure. Replace the blanket global Secure Event Input rejection with a fresh focused-control metadata check. Confirmed ordinary text controls may accept insertion while the global flag remains on; recognized password controls always refuse, unverified controls keep the global guard, and focus changes during inspection refuse delivery. No security disabling or field-value reading. Apple's [TN2150](https://developer.apple.com/library/archive/technotes/tn2150/_index.html) and the SDK's CarbonEventsCore.h establish that the global flag can be held by a background process; it does not identify the focused field._
+
 ## 0. Decisions (Scott, 2026-09-29)
 
 | Decision | Ruling |
@@ -62,7 +64,7 @@ One Swift 6 process: `MenuBarExtra` status item + a non-activating floating `NSP
 | `MoonshineEngine` final role | `Transcriber.transcribeWithoutStreaming(audioData:sampleRate:flags:)` on the complete utterance after streaming stops | Same resident native transcriber; serialized actor access. Join completed transcript lines in order. Never substitute a preview after final failure. |
 | `MoonshineEngine` preview role | `MoonshineVoice.Transcriber(modelPath:modelArch: .mediumStreaming)` + `Stream`; `addAudio(_:sampleRate: 16000)` per chunk; listeners for `LineTextChanged` / `LineCompleted` / `TranscriptError` | Model fetched with `ensureModelPresent(root:spec: .stt("en", .mediumStreaming, …))` into `~/Library/Application Support/sAId/models/moonshine/` |
 | `PostProcess` | Corrections dictionary (whole-word, case-insensitive, user-editable JSON), filler removal (`um`, `uh`, `you know`, …), first-letter capitalization, trailing-space option | Logic adapted from Parakey's small helpers (attributed); rewritten with tests |
-| `Inserter` | Refuse if `IsSecureEventInputEnabled()`; snapshot pasteboard items; write text; post ⌘V via `CGEvent` (`.combinedSessionState`); after 150 ms restore the snapshot; selectable Unicode typing for apps that ignore paste; automatic fallback only for known pre-delivery setup failures | Ported from Parakey (`docs/borrowed/parakey-text-insertion.swift`), MIT notice kept |
+| `Inserter` | Recheck focused-control security before clipboard access and every posted event; refuse password controls, unstable focus, or unverified focus while global Secure Input is on. Snapshot pasteboard items; write text; post ⌘V via `CGEvent` (`.combinedSessionState`); after 150 ms restore the snapshot; selectable Unicode typing for apps that ignore paste; automatic fallback only for known pre-delivery setup failures | Ported from Parakey (`docs/borrowed/parakey-text-insertion.swift`), MIT notice kept |
 | `HUD` | `NSPanel` (`.nonactivatingPanel`, `.floating`, ignores mouse, no key focus), bottom-center of the screen containing the mouse; states in §4 | Fresh, SwiftUI content |
 | `Permissions` | Microphone (`AVCaptureDevice.requestAccess`), Input Monitoring (`CGPreflightListenEventAccess`/`CGRequestListenEventAccess`), Accessibility (`AXIsProcessTrustedWithOptions`); first-run checklist | Fresh |
 | `Settings` | Hotkey keycode, input device, corrections editor, filler toggle, model status/reset | SwiftUI, `UserDefaults` + JSON files in Application Support |

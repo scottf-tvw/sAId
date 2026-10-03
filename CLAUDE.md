@@ -27,7 +27,10 @@ The first `swift build` downloads the Moonshine binary framework; later builds a
   in v1. The shared Moonshine model stays resident for both transcription roles.
 - **Audio invariants (spec §2.3)** are law: converter block returns `.noDataNow` never `.endOfStream`;
   `AudioCapture` is not `@MainActor`; never transcribe inside the tap; `Bundle.main` not `Bundle.module`.
-- **Never paste into secure input** (`IsSecureEventInputEnabled()`); always restore the clipboard.
+- **Never paste into a password field.** Recheck focused Accessibility role/subrole before delivery.
+  `IsSecureEventInputEnabled()` is a system-wide flag, not a field classification: confirmed ordinary
+  text controls may accept insertion while it is on; unverified controls remain blocked. Focus changes
+  during inspection also block insertion. Never disable another process's Secure Input; always restore the clipboard.
 - **Preview text is never pasted.** Only the final transcription result reaches the Inserter.
 - **Attribution.** Any file that ports Parakey code keeps the MIT notice line from
   `docs/borrowed/*.swift`. Ported regions: hotkey listener, text insertion, corrections/filler helpers.

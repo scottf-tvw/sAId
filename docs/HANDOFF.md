@@ -1,6 +1,18 @@
-# HANDOFF — sAId (updated 2026-09-29)
+# HANDOFF — sAId (updated 2026-10-03)
 
 Read `CLAUDE.md`, the amended design, then the implementation plan. Scott authorized completing the project autonomously and asking for human help only when needed.
+
+## Secure Input recovery follow-up (1.0.2 build 3)
+
+Scott reports that after sAId works for a while, every field is rejected as secure. The old inserter used `IsSecureEventInputEnabled()` as the sole test. Apple's SDK documents that this reports Secure Input enabled by **any process**, and [TN2150](https://developer.apple.com/library/archive/technotes/tn2150/_index.html) explains how background processes can leave it on. The app did not cache this flag; restarting its model would not correct that policy. The specific process or event causing Scott's global flag to remain enabled is unconfirmed. The optional question about whether restarting sAId helps has not been answered.
+
+The fix reads focused-control Accessibility role/subrole metadata anew before clipboard access and every posted event. Recognized secure/password subroles always refuse. Ordinary text field/area roles with ordinary or absent subroles can insert despite a global true. Unavailable, malformed, custom or container metadata retains the conservative global guard, with a separate “Secure Input active” message instead of falsely asserting a password field. If focus changes during inspection, insertion refuses even when the global flag is false. The same inserter recovers as soon as the next check sees ordinary focus; no permission/model reset is involved. The existing custom-editor behavior is preserved when global Secure Input is off.
+
+Native AX messaging uses 50 ms timeouts on the individual application/element objects; each inspection makes at most four attribute reads and does not change the process-wide AX timeout. It checks frontmost PID and focused identity again before accepting metadata. It never reads field values, selections, labels, titles or URLs, never walks parent containers and never disables Secure Input. Copy diagnostics records the latest insertion check's global boolean, classification and decision; it does not inspect the newly focused menu or retain AX elements/PIDs. Clipboard cleanup, cancellation and security rejection without fallback remain intact.
+
+Regression tests cover 20 repeated secure→ordinary transitions on one inserter while the global flag stays true, secure fields with the global flag false, unreadable-control recovery, clipboard-time and Unicode-chunk focus changes, metadata/error decoding and stale-focus rejection. Full suite and signed Release verification are recorded in `.superpowers/sdd/2026-10-03-secure-input-recovery/`; independent review and delivery are in progress. No real desktop/input/microphone/TCC operation or security enable/disable call was performed.
+
+Next human acceptance: after installing the update, repeat ordinary dictation, enter/leave a real password field, then return to ordinary text without restarting sAId. A real password field must still refuse; normal text should resume. If refusal remains, copy diagnostics immediately and report whether the HUD/hotkey still responds. macOS can itself suppress event-tap hotkeys while another process holds Secure Input; this change corrects sAId's insertion policy and cannot promise to disable another app's system protection. Earlier window/latency and clipboard acceptance remain pending unless Scott supplies results.
 
 ## Home smoke follow-up (1.0.1 build 2)
 
@@ -38,7 +50,7 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - Public MIT repo: `github.com/scottf-tvw/sAId`.
 - Original checkout `/Volumes/Work/GitDev/sAId` remains on `main`.
 - **Active worktree:** `/Users/scottfreeman/.codex/worktrees/said-implementation/sAId`.
-- Current branch: `fix/home-smoke-latency-windows`, based on code baseline `e49a33e` and follow-up plan commit `ce97a9e`. Earlier implementation work is preserved below as history.
+- Current branch: `codex/fix-secure-input-recovery`, based on `b0b5ddb` from PR #13. Earlier implementation work is preserved below as history.
 - [PR #1](https://github.com/scottf-tvw/sAId/pull/1): baseline menu-bar entry/test target (original engine pin, superseded by the amendment).
 - [PR #2](https://github.com/scottf-tvw/sAId/pull/2): pure state machine and async engine protocols.
 - [PR #3](https://github.com/scottf-tvw/sAId/pull/3): Moonshine-only dependency/design amendment (review clean).

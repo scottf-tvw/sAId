@@ -163,6 +163,93 @@ final class TextInserterTests: XCTestCase {
         XCTAssertTrue(events.posted.isEmpty)
     }
 
+    func testGlobalSecureInputDoesNotLatchAfterLeavingPasswordField() async throws {
+        let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
+        let field = MutableFocusedInput(.secure)
+        let sink = TextInserter(pasteboard: board, events: events,
+                                secureInput: { true }, focusedInput: { field.value }, delay: { _ in })
+        // One resident inserter, with the global flag held true across every transition.
+        for _ in 0..<20 {
+            field.value = .secure
+            await expect(.secureInput) { try await sink.insert("private") }
+            let count = events.posted.count
+            field.value = .ordinaryText
+            try await sink.insert("ordinary")
+            XCTAssertEqual(events.posted.count, count + 2)
+            XCTAssertEqual(board.items, rich)
+        }
+    }
+
+    func testFocusedPasswordRefusesEvenWhenGlobalSecureFlagIsFalse() async {
+        let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
+        let sink = TextInserter(pasteboard: board, events: events,
+                                secureInput: { false }, focusedInput: { .secure }, delay: { _ in })
+        await expect(.secureInput) { try await sink.insert("private") }
+        XCTAssertEqual(board.reads, 0)
+        XCTAssertTrue(events.posted.isEmpty)
+    }
+
+    func testUnverifiedFocusWithGlobalSecureInputRefusesWithoutFallbackAndRecovers() async throws {
+        let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
+        let field = MutableFocusedInput(.unverified)
+        let sink = TextInserter(pasteboard: board, events: events,
+                                secureInput: { true }, focusedInput: { field.value }, delay: { _ in })
+        await expect(.secureInputUnverified) { try await sink.insert("text") }
+        XCTAssertEqual(board.reads, 0)
+        XCTAssertEqual(events.unicodePreparations, 0)
+        XCTAssertTrue(events.posted.isEmpty)
+        field.value = .ordinaryText
+        try await sink.insert("recovered")
+        XCTAssertEqual(events.posted, ["pasteDown", "pasteUp"])
+    }
+
+    func testUnverifiedCustomEditorStillWorksWhenGlobalSecureInputIsOff() async throws {
+        let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
+        let sink = TextInserter(pasteboard: board, events: events,
+                                secureInput: { false }, focusedInput: { .unverified }, delay: { _ in })
+        try await sink.insert("text")
+        XCTAssertEqual(events.posted, ["pasteDown", "pasteUp"])
+        XCTAssertEqual(board.items, rich)
+    }
+
+    func testFocusedPasswordAppearingDuringClipboardWriteRestoresWithoutPosting() async {
+        let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
+        let field = MutableFocusedInput(.ordinaryText)
+        board.onWrite = { field.value = .secure }
+        let sink = TextInserter(pasteboard: board, events: events,
+                                secureInput: { false }, focusedInput: { field.value }, delay: { _ in })
+        await expect(.secureInput) { try await sink.insert("text") }
+        XCTAssertEqual(board.items, rich)
+        XCTAssertTrue(events.posted.isEmpty)
+        XCTAssertEqual(events.unicodePreparations, 0)
+    }
+
+    func testFocusedPasswordStopsSubsequentUnicodeChunks() async {
+        let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
+        let field = MutableFocusedInput(.ordinaryText)
+        events.onPost = { field.value = .secure }
+        let sink = TextInserter(pasteboard: board, events: events, strategy: .directUnicode,
+                                secureInput: { false }, focusedInput: { field.value }, delay: { _ in })
+        await expect(.secureInput) { try await sink.insert("12345678901234567890second") }
+        XCTAssertEqual(events.posted, ["unicode0"])
+        XCTAssertEqual(board.reads, 0)
+    }
+
+    func testChangingFocusRefusesEvenWithGlobalSecurityOffAndReportsLastDecision() async {
+        let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
+        let field = MutableFocusedInput(.ordinaryText)
+        board.onWrite = { field.value = .focusChanged }
+        let sink = TextInserter(pasteboard: board, events: events,
+                                secureInput: { false }, focusedInput: { field.value }, delay: { _ in })
+        await expect(.focusChanged) { try await sink.insert("private test content") }
+        XCTAssertEqual(board.items, rich)
+        XCTAssertTrue(events.posted.isEmpty)
+        XCTAssertEqual(events.unicodePreparations, 0)
+        XCTAssertEqual(TextInserter.latestSecurityCheck?.focusedInput, .focusChanged)
+        XCTAssertEqual(TextInserter.latestSecurityCheck?.globalSecureInput, false)
+        XCTAssertEqual(TextInserter.latestSecurityCheck?.refusal, .focusChanged)
+    }
+
     func testSecureInputIsCheckedAgainImmediatelyBeforeDelivery() async {
         let board = FakeInsertionPasteboard(rich), events = FakeInsertionEvents()
         var secure = false
@@ -259,7 +346,8 @@ final class TextInserterTests: XCTestCase {
                       secure: @escaping @MainActor () -> Bool = { false },
                       delay: @escaping @MainActor (Duration) async throws -> Void = { _ in }) -> TextInserter {
         TextInserter(pasteboard: board, events: events, strategy: strategy,
-                     allowsUnicodeFallback: fallback, secureInput: secure, delay: delay)
+                     allowsUnicodeFallback: fallback, secureInput: secure,
+                     focusedInput: { secure() ? .secure : .unverified }, delay: delay)
     }
 
     private func expect(_ expected: TextInsertionError, operation: () async throws -> Void) async {
@@ -346,4 +434,10 @@ private final class InsertionDelayGate {
         await withCheckedContinuation { observer = $0 }
     }
     func release() { continuation?.resume(); continuation = nil }
+}
+
+@MainActor
+private final class MutableFocusedInput {
+    var value: FocusedInputSecurity
+    init(_ value: FocusedInputSecurity) { self.value = value }
 }

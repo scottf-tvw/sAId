@@ -14,7 +14,7 @@ enum TextInsertionStrategy: String, Sendable, CaseIterable, Codable {
 }
 
 enum TextInsertionError: Error, Equatable {
-    case secureInput, permissionUnavailable, eventCreationFailed
+    case secureInput, secureInputUnverified, focusChanged, permissionUnavailable, eventCreationFailed
     case snapshotFailed, clipboardWriteFailed, clipboardChanged, clipboardRestoreFailed
     case insertionInProgress
 
@@ -22,6 +22,8 @@ enum TextInsertionError: Error, Equatable {
     var diagnosticCategory: String {
         switch self {
         case .secureInput: "secureInput"
+        case .secureInputUnverified: "secureInputUnverified"
+        case .focusChanged: "focusChanged"
         case .permissionUnavailable: "permissionUnavailable"
         case .eventCreationFailed: "eventCreationFailed"
         case .snapshotFailed: "snapshotFailed"
@@ -32,7 +34,12 @@ enum TextInsertionError: Error, Equatable {
         }
     }
     var userMessage: String {
-        self == .secureInput ? "Secure input field" : "Paste failed — copy from History"
+        switch self {
+        case .secureInput: "Secure input field"
+        case .secureInputUnverified: "Secure Input active — refocus or close password dialogs"
+        case .focusChanged: "Focus changed — try again or copy from History"
+        default: "Paste failed — copy from History"
+        }
     }
 }
 
@@ -55,9 +62,11 @@ final class TextInserter: TextSink {
     var strategy: TextInsertionStrategy
     var allowsUnicodeFallback: Bool
     private static var inserting = false
+    private(set) static var latestSecurityCheck: InsertionSecurityCheck?
     private let pasteboard: any InsertionPasteboard
     private let events: any InsertionEvents
     private let secureInput: @MainActor () -> Bool
+    private let focusedInput: @MainActor () -> FocusedInputSecurity
     private let delay: @MainActor (Duration) async throws -> Void
 
     init(pasteboard: any InsertionPasteboard = SystemInsertionPasteboard(),
@@ -65,12 +74,14 @@ final class TextInserter: TextSink {
          strategy: TextInsertionStrategy = .clipboardPaste,
          allowsUnicodeFallback: Bool = true,
          secureInput: @escaping @MainActor () -> Bool = { IsSecureEventInputEnabled() },
+         focusedInput: @escaping @MainActor () -> FocusedInputSecurity = { FocusedInputSecurity.current() },
          delay: @escaping @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
         self.pasteboard = pasteboard
         self.events = events
         self.strategy = strategy
         self.allowsUnicodeFallback = allowsUnicodeFallback
         self.secureInput = secureInput
+        self.focusedInput = focusedInput
         self.delay = delay
     }
 
@@ -140,7 +151,10 @@ final class TextInserter: TextSink {
 
     private func checkDeliveryAllowed() throws {
         try Task.checkCancellation()
-        guard !secureInput() else { throw TextInsertionError.secureInput }
+        let field = focusedInput()
+        let check = InsertionSecurityCheck(globalSecureInput: secureInput(), focusedInput: field)
+        Self.latestSecurityCheck = check
+        if let refusal = check.refusal { throw refusal }
     }
 }
 
