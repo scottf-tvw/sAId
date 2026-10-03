@@ -7,3 +7,7 @@ DerivedData/
 .DS_Store
 /dist/
 /release/
+/build/
+/.superpowers/
+
+__pycache__/
