@@ -3,6 +3,12 @@
 Run on real hardware after any change to Hotkey, AudioCapture, Inserter, HUD or Permissions.
 These are Scott's to verify; an agent reports them as "needs smoke" in the PR, never as done.
 
+## Selected microphone failure (2026-10-06)
+
+Scott reports device/capture failure on the Studio in1.0.2. His diagnostics confirm model ready, all permissions granted, Right Control hotkey and captureFailed before insertion. App logs show `!siz`; macOS detects the selected DJI Wireless Mic Rx. Version1.0.3 repairs the selected-device UID lookup's Core Audio qualifier/output format, with a read-only native RED→GREEN reproduction. No real capture acceptance is claimed.
+
+After quitting/replacing/reopening the app, confirm1.0.3 in diagnostics. In Settings choose **Wireless Mic Rx** explicitly, then hold **Right Control**, speak, and release in an ordinary text field. Confirm live words, final insertion and clipboard restoration. Separately check System default still works. If either fails, copy diagnostics and note the selected option. A disconnected explicit microphone must report failure rather than silently use a different input.
+
 ## Secure Input recovery report (2026-10-03)
 
 Scott reports that all fields eventually become “Secure input field,” preventing dictation. **1.0.2 build 3** corrects the blanket system-wide flag check with fresh focused-control metadata. Automated tests verify repeated recovery, password refusal, changing focus and clipboard safety; real hardware acceptance remains pending.

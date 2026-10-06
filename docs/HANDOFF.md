@@ -1,6 +1,16 @@
-# HANDOFF — sAId (updated 2026-10-03)
+# HANDOFF — sAId (updated 2026-10-06)
 
 Read `CLAUDE.md`, the amended design, then the implementation plan. Scott authorized completing the project autonomously and asking for human help only when needed.
+
+## Selected microphone lookup repair (1.0.3 build 4)
+
+Scott is now testing on the **Studio**. His 1.0.2 diagnostics show model ready, all three permissions true, Right Control hotkey, and `captureFailed` before insertion. Read-only app logs repeatedly report `coreAudio(561211770)` (`!siz`, bad property size). macOS detects the DJI Wireless Mic Rx as default input, and the saved sAId preference selects that same device explicitly. The microphone is present; selected-device lookup is broken.
+
+`SystemAudioBackend.resolveDevice` incorrectly used an `AudioValueTranslation` output buffer with no qualifier for `kAudioHardwarePropertyTranslateUIDToDevice`. Apple's installed `AudioHardware.h` documents a CFString UID qualifier and an AudioDeviceID output. The old production resolver reproduced the exact `!siz` error in a read-only native metadata test. The corrected qualifier/output call passes that same native test and validates returned size/status/unknown IDs. A missing explicit device still fails instead of silently capturing from another microphone. System-default capture was unaffected; Scott was given **Settings → Microphone → System default** as an immediate workaround.
+
+Five focused tests pass, including opt-in native metadata resolution and UID identity round trips without starting an audio engine. Full `make test` passes: **200 XCTest cases (3 expected opt-in skips), 12 Swift Testing cases and 15 packaging tests**. The native metadata test was separately enabled and passed; the other two skips are unchanged model checks. Signed Release 1.0.3 build 4 passes signature/resources/architecture/entitlement checks, executable SHA256 `0ee13fa31250fd356d1746d8c79c6bb2f25c0c2ad812379721b658a70db924ef`. Evidence is in `.superpowers/sdd/2026-10-06-microphone-lookup/` (`red.log`, `native-red.log`, `green.log`, `full-test.log`, `release.log`). No microphone capture, TCC request, clipboard/input or GUI action was performed by agents.
+
+Independent review and delivery are in progress. sAId 1.0.2 is running at `/Applications/sAId.app`; do not replace it until Scott quits. Next acceptance is reopening 1.0.3, explicitly selecting Wireless Mic Rx, and dictating with **Right Control**. Native metadata success does not prove audio capture/delivery; those remain Scott's check. Earlier Secure Input recovery, window fit, latency and clipboard acceptance remain pending unless reported.
 
 ## Secure Input recovery follow-up (1.0.2 build 3)
 
@@ -60,7 +70,7 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - Public MIT repo: `github.com/scottf-tvw/sAId`.
 - Original checkout `/Volumes/Work/GitDev/sAId` remains on `main`.
 - **Active worktree:** `/Users/scottfreeman/.codex/worktrees/said-implementation/sAId`.
-- Current branch: `codex/fix-secure-input-recovery`, based on `b0b5ddb` from PR #13. Earlier implementation work is preserved below as history.
+- Current branch: `codex/fix-microphone-lookup`, based on `c70bb85` from PR #14. Earlier implementation work is preserved below as history.
 - [PR #1](https://github.com/scottf-tvw/sAId/pull/1): baseline menu-bar entry/test target (original engine pin, superseded by the amendment).
 - [PR #2](https://github.com/scottf-tvw/sAId/pull/2): pure state machine and async engine protocols.
 - [PR #3](https://github.com/scottf-tvw/sAId/pull/3): Moonshine-only dependency/design amendment (review clean).

@@ -122,24 +122,29 @@ actor SystemAudioBackend: AudioCaptureBackend {
         engine = nil
     }
 
-    private static func resolveDevice(uid: String) throws -> AudioDeviceID {
+    /// Synchronous Core Audio boundary. All qualifier/output pointers are borrowed for this call only.
+    typealias PropertyReader = (AudioObjectID, UnsafePointer<AudioObjectPropertyAddress>, UInt32,
+                               UnsafeRawPointer?, UnsafeMutablePointer<UInt32>, UnsafeMutableRawPointer) -> OSStatus
+
+    static func resolveDevice(uid: String, readProperty: PropertyReader = AudioObjectGetPropertyData) throws -> AudioDeviceID {
         var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyTranslateUIDToDevice,
                                                 mScope: kAudioObjectPropertyScopeGlobal,
                                                 mElement: kAudioObjectPropertyElementMain)
         var value = uid as CFString
         var device = AudioDeviceID(kAudioObjectUnknown)
-        let status = withUnsafeMutablePointer(to: &value) { input in
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        // This selector takes the UID as qualifier data and returns an AudioDeviceID.
+        // AudioValueTranslation belongs to a different API contract and produces '!siz' here.
+        let status = withUnsafePointer(to: &value) { input in
             withUnsafeMutablePointer(to: &device) { output in
-                var translation = AudioValueTranslation(mInputData: input,
-                                                        mInputDataSize: UInt32(MemoryLayout<CFString>.size),
-                                                        mOutputData: output,
-                                                        mOutputDataSize: UInt32(MemoryLayout<AudioDeviceID>.size))
-                var size = UInt32(MemoryLayout<AudioValueTranslation>.size)
-                return AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address,
-                                                  0, nil, &size, &translation)
+                return readProperty(AudioObjectID(kAudioObjectSystemObject), &address,
+                                    UInt32(MemoryLayout<CFString>.size), input, &size, output)
             }
         }
         guard status == noErr else { throw AudioCaptureError.coreAudio(status) }
+        guard size == MemoryLayout<AudioDeviceID>.size else {
+            throw AudioCaptureError.coreAudio(kAudioHardwareBadPropertySizeError)
+        }
         guard device != kAudioObjectUnknown else { throw AudioCaptureError.deviceUnavailable }
         return device
     }

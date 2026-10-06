@@ -54,8 +54,8 @@ targets:
         PRODUCT_NAME: sAId
         INFOPLIST_FILE: Info.plist
         CODE_SIGN_ENTITLEMENTS: sAId.entitlements
-        MARKETING_VERSION: '1.0.2'
-        CURRENT_PROJECT_VERSION: '3'
+        MARKETING_VERSION: '1.0.3'
+        CURRENT_PROJECT_VERSION: '4'
 schemes:
   sAId:
     build:
