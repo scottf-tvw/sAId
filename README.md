@@ -20,16 +20,14 @@ Full hardware acceptance remains pending: clipboard restoration, other target ap
 permission recovery and the eight-hour residency test still need the checks in [SMOKE.md](docs/SMOKE.md).
 Automated tests do not establish those results.
 
-The latest update is on `codex/fix-secure-input-recovery`; [PR #14](https://github.com/scottf-tvw/sAId/pull/14)
-fixes ordinary fields being rejected when another process leaves macOS Secure Input enabled. Focused
-control metadata is checked before delivery; password fields still refuse, and unknown controls remain
-blocked while global Secure Input is active. Review findings around cancellation and clipboard changes
-during the check were fixed with regression coverage. Copy diagnostics records the last security decision.
+The latest update is on `codex/fix-microphone-lookup`; [PR #15](https://github.com/scottf-tvw/sAId/pull/15)
+fixes capture failure when a microphone is selected explicitly. Core Audio UID lookup now uses the
+correct qualifier/output format. A native metadata check reproduced the old error and passes after
+the correction. Actual microphone capture still needs the human retest.
 
-Signed Release 1.0.2 (build 3) is installed on the implementation Mac without an agent launch; a verified
-signed local-test ZIP is ready for the home recovery check. PRs #1–14 remain open and unmerged pending approval.
-The earlier utility-window fix is included; home insertion latency still needs measurements. Transfer
-instructions, remaining checks and verification are in [HANDOFF.md](docs/HANDOFF.md).
+Signed Release 1.0.3 (build 4) is staged on the Studio; installation waits for the running app to quit.
+PRs #1–15 remain open and unmerged pending approval. The earlier Secure Input and utility-window fixes
+are included. Remaining acceptance checks and verification are in [HANDOFF.md](docs/HANDOFF.md).
 
 ## Build and install
 
@@ -108,7 +106,7 @@ prerecorded clips measures compute time, **not live preview or release-to-paste 
 ## Release
 
 ```bash
-make release VERSION=1.0.2
+make release VERSION=1.0.3
 ```
 
 The script sets the bundle version, builds Release, stages and signs it with Developer ID and hardened

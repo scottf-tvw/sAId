@@ -10,7 +10,7 @@ Scott is now testing on the **Studio**. His 1.0.2 diagnostics show model ready, 
 
 Five focused tests pass, including opt-in native metadata resolution and UID identity round trips without starting an audio engine. Full `make test` passes: **200 XCTest cases (3 expected opt-in skips), 12 Swift Testing cases and 15 packaging tests**. The native metadata test was separately enabled and passed; the other two skips are unchanged model checks. Signed Release 1.0.3 build 4 passes signature/resources/architecture/entitlement checks, executable SHA256 `0ee13fa31250fd356d1746d8c79c6bb2f25c0c2ad812379721b658a70db924ef`. Evidence is in `.superpowers/sdd/2026-10-06-microphone-lookup/` (`red.log`, `native-red.log`, `green.log`, `full-test.log`, `release.log`). No microphone capture, TCC request, clipboard/input or GUI action was performed by agents.
 
-Independent review and delivery are in progress. sAId 1.0.2 is running at `/Applications/sAId.app`; do not replace it until Scott quits. Next acceptance is reopening 1.0.3, explicitly selecting Wireless Mic Rx, and dictating with **Right Control**. Native metadata success does not prove audio capture/delivery; those remain Scott's check. Earlier Secure Input recovery, window fit, latency and clipboard acceptance remain pending unless reported.
+Independent review found no issues. [PR #15](https://github.com/scottf-tvw/sAId/pull/15) is open and attached against main, stacked on PR #14. A verified signed app is staged at `/Users/scottfreeman/Downloads/sAId-update-1.0.3.JeKRN7/sAId.app`; the matching local-test ZIP is in the same directory, `sAId-1.0.3-local-test.zip`, SHA256 `074e32b658fab64f6fc2d52d2097f73fba7bd0458142c048c45ab42c0cd9a806`. Extracted signature/resources/executable match were verified; the owned extraction was removed. The archive is not notarized. sAId 1.0.2 is still running at `/Applications/sAId.app`; the async request for Scott to quit is pending. Do not replace it until exit is confirmed. No install or relaunch of 1.0.3 has occurred. Next acceptance is reopening 1.0.3, explicitly selecting Wireless Mic Rx, and dictating with **Right Control**. Native metadata success does not prove audio capture/delivery; those remain Scott's check. Earlier Secure Input recovery, window fit, latency and clipboard acceptance remain pending unless reported.
 
 ## Secure Input recovery follow-up (1.0.2 build 3)
 
@@ -85,7 +85,8 @@ Use Swift `.mediumStreaming`, language `en`, one resident actor-owned native mod
 - [PR #12](https://github.com/scottf-tvw/sAId/pull/12): shared benchmark, safe signed packaging and final integration fixes; reviewed and installed.
 - [PR #13](https://github.com/scottf-tvw/sAId/pull/13): useful utility window sizes and content-free session stage diagnostics, reviewed and installed as 1.0.1 build 2 on the Studio; home retest pending.
 - [PR #14](https://github.com/scottf-tvw/sAId/pull/14): focused-field Secure Input recovery and delivery-race fixes, tested and installed as 1.0.2 build 3 on the Studio; home recovery retest pending.
-- PRs #1–14 remain open and unmerged pending approval. Task 11 is complete at `42419f9`/`1cbf097`; task review and scoped re-review approved. The final whole-branch review and one consolidated fix/re-review wave are complete at `77232c8`: all three requested fixes are accepted, with two nonblocking follow-ups documented below.
+- [PR #15](https://github.com/scottf-tvw/sAId/pull/15): selected-microphone UID lookup repair, reviewed/tested and staged as 1.0.3 build 4; installation waits for Scott to quit the running Studio app.
+- PRs #1–15 remain open and unmerged pending approval. Task 11 is complete at `42419f9`/`1cbf097`; task review and scoped re-review approved. The final whole-branch review and one consolidated fix/re-review wave are complete at `77232c8`: all three requested fixes are accepted, with two nonblocking follow-ups documented below.
 - Task 10 app shell/signed bundle is complete at `c35013e`/`a149c35`, base `75185b8`; independent review approved, menu-error fix re-review clean.
 - Task 9 controller/HUD is complete at `f1c3b3d`, review clean; 164 strict tests pass with two expected opt-in skips.
 - Task 7 Moonshine adapter/cache/preview is complete at `8a01472`, review clean; all 127 strict tests pass with cached-model contracts enabled. Task 8 final transcription is complete at `f1b24cd`, review clean.
@@ -201,7 +202,7 @@ Controller integration: `send(action,target:)` is synchronous/nonisolated and be
 
 ## Next work
 
-The 1.0.2 Secure Input recovery follow-up is installed at `/Applications/sAId.app` on the Studio, and PR #14 is open. The latest ZIP at the top of this handoff is ready for Scott's home Mini; secure→ordinary recovery is the next live check. Earlier window acceptance, clipboard restoration and a latency stage report remain pending; home latency is not yet resolved or measured. Merge approval is still pending. Keep the worktree for PR feedback and live acceptance; do not merge, launch the app or perform desktop automation on Scott's behalf. This thread is long: use this handoff and the saved project memory to start a fresh thread for smoke results.
+Scott is on the Studio. Version 1.0.3 fixes the selected-microphone lookup and is reviewed, signed and staged as described at the top. PR #15 is open. Install after Scott quits the currently running 1.0.2 app, verify the installed app, then ask him to reopen and dictate using explicit Wireless Mic Rx and Right Control. Preserve user settings. Earlier Secure Input/window/clipboard/latency acceptance remains pending. Merge approval is still pending. Keep the worktree for PR feedback and live acceptance; do not merge, launch the app or perform desktop automation on Scott's behalf. This thread is long: use this handoff and the saved project memory to start a fresh thread for smoke results.
 
 Human testing has started: Scott reports successful live transcription/insertion into this chat on the home Mini, with visible live HUD words. Next, copy a distinctive clipboard sentinel, dictate in **Notes** with Right Option, then paste on a new line to verify the original sentinel returns. Clipboard restoration is explicitly untested. Record results in `docs/SMOKE.md`; full matrix criteria remain pending, including measured preview latency, other target apps, secure-input refusal, focus, device changes, sleep/wake and eight-hour memory residency.
 
@@ -209,7 +210,7 @@ The last profile check found `said-notary` absent. The existing human question a
 
 ```bash
 xcrun notarytool store-credentials said-notary --team-id M2TEAF948X
-make release VERSION=1.0.2
+make release VERSION=1.0.3
 ```
 
 Do not send credentials through chat or source files. No credentials were read and no additional profiles probed. Signed local builds are ready without notarization; a notarized distribution ZIP has not been created.
