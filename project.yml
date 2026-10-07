@@ -1,0 +1,67 @@
+name: sAId
+options:
+  bundleIdPrefix: org.tvw
+  deploymentTarget:
+    macOS: '15.0'
+  createIntermediateGroups: true
+packages:
+  MoonshineVoice:
+    url: https://github.com/moonshine-ai/moonshine-swift.git
+    exactVersion: 0.1.5
+settings:
+  base:
+    SWIFT_VERSION: '6.0'
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    MACOSX_DEPLOYMENT_TARGET: '15.0'
+    ARCHS: arm64
+    ONLY_ACTIVE_ARCH: YES
+    DEVELOPMENT_TEAM: M2TEAF948X
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: 'Developer ID Application: Scott DL Freeman (M2TEAF948X)'
+    ENABLE_HARDENED_RUNTIME: YES
+    ENABLE_DEBUG_DYLIB: NO
+    CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+    ENABLE_APP_SANDBOX: NO
+targets:
+  SaidEngine:
+    type: library.static
+    platform: macOS
+    sources:
+      - path: Sources/SaidEngine
+    dependencies:
+      - package: MoonshineVoice
+        product: MoonshineVoice
+    settings:
+      base:
+        PRODUCT_MODULE_NAME: SaidEngine
+        DEFINES_MODULE: YES
+  sAId:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/sAId
+      - path: Resources
+        buildPhase: resources
+    dependencies:
+      - target: SaidEngine
+      # Xcode does not propagate SPM objects through a local static-library target.
+      - package: MoonshineVoice
+        product: MoonshineVoice
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.tvw.said
+        PRODUCT_NAME: sAId
+        INFOPLIST_FILE: Info.plist
+        CODE_SIGN_ENTITLEMENTS: sAId.entitlements
+        MARKETING_VERSION: '1.0.3'
+        CURRENT_PROJECT_VERSION: '4'
+schemes:
+  sAId:
+    build:
+      targets:
+        sAId: all
+    run:
+      config: Debug
+    archive:
+      config: Release
